@@ -1,0 +1,1 @@
+role r : p { Peer_lost -> 1, Peer_lost -> 2 }

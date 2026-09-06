@@ -1,0 +1,5 @@
+let plain = let x = 1 in x + 1
+let rec even = fun n -> if n == 0 then true else odd (n - 1)
+and odd = fun n -> if n == 0 then false else even (n - 1)
+let choose = if flag then 1 else 2
+let nested = let rec loop = fun x -> loop x in loop 1

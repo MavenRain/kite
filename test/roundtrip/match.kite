@@ -1,0 +1,6 @@
+let v = match x with | < ok a > -> a | < err b > -> b
+let l = match n with | 0 -> "zero" | 1 -> "one" | other -> other
+let r = match p with | { a = u | rest } -> u
+let w = match k with | _ -> 0
+let o = match p with | { a ^ 1 = u } -> u
+let q = match x with | < ok ^ 2 a > -> a

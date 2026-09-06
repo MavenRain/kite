@@ -1,0 +1,2 @@
+@budget { atoms = 64 , constraints = 32 }
+let guarded = 1

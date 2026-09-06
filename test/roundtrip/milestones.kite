@@ -1,0 +1,17 @@
+node n_a
+leader l_a
+registry r_a
+placement p_a
+heartbeat h_a
+pod d_a
+store s_a
+service v_a
+taint t_a
+drain n_b
+doorbell b_a
+volume m_a
+proof f_a
+port o_a
+fuel u_a
+cost_table c_a
+blob z_a

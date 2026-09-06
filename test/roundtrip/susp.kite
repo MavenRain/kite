@@ -1,0 +1,1 @@
+let s = (x : { susp : Int, done : Str })

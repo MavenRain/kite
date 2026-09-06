@@ -1,0 +1,3 @@
+let ext = { a = 1 | r }
+let res = { r - a }
+let sel = r.a

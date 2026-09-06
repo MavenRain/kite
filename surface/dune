@@ -1,0 +1,10 @@
+; surface/dune:  kite_surface, the front end of M0.
+; The module list stays open, so parser.ml and print.ml join the library
+; with no edit of this file (D-A-2).
+; -warn-error +a makes a warning an error (D-A-2).
+
+(library
+ (name kite_surface)
+ (wrapped false)
+ (libraries kite_core)
+ (flags (:standard -warn-error +a)))

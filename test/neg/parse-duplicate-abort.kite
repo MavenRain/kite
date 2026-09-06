@@ -1,0 +1,1 @@
+role r : p { abort -> 1, abort -> 2 }

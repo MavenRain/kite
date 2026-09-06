@@ -1,0 +1,2 @@
+let two = f x
+let three = f x y

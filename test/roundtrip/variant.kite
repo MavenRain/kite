@@ -1,0 +1,4 @@
+let plain = < ok 1 >
+let indexed = < ok ^ 2 1 >
+let passed = f (< ok 1 >)
+let indexed_arg = g (< ok ^ 2 1 >)

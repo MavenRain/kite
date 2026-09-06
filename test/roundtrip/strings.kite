@@ -1,0 +1,4 @@
+let nl = "a\nb"
+let tab = "a\tb"
+let back = "a\\b"
+let quo = "a\"b"

@@ -1,0 +1,4 @@
+(* a (* b *) c *)
+let one = 1
+(* between the two declarations *)
+let two = (* inside an expression *) 2

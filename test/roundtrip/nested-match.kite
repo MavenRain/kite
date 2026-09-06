@@ -1,0 +1,6 @@
+let f x = match x with | true -> (if true then 1 else match x with | true -> 2) | false -> 3
+let g x = match x with | true -> (fun y -> match y with | true -> 2) | false -> 3
+let h x = match x with | true -> (let y = x in match y with | true -> 2) | false -> 3
+let i x = match x with | true -> (let rec y z = z in match x with | true -> 2) | false -> 3
+let j x = match x with | true -> (if true then 1 else let y = x in fun z -> match z with | true -> 2) | false -> 3
+let r = { a = (if true then 1 else match x with | true -> 2) | base }

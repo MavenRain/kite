@@ -1,0 +1,6 @@
+let a = (x : Int)
+let b = (f : Int -> Int)
+let c = (g : Int -1> Int)
+let d = (r : { a : Int, b : Str })
+let e = (v : < ok : Int | rest >)
+let k = (q : Code [ a : Int , Int ])

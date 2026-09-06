@@ -1,0 +1,1 @@
+manifest M { pod p { image = "a" , replicas = 3 } , service s { port = 1 } }

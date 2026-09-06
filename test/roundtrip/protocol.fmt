@@ -1,0 +1,1 @@
+protocol Two { state Start { go : Int -> Next } compensate undo state Next { done : Str -> Start } }

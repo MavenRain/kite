@@ -1,0 +1,10 @@
+let arith = a + b - c * d / e % f
+let cat = s ^ t
+let cmp = a == b
+let ne = a != b
+let lt = a < b
+let le = a <= b
+let gt = a > b
+let ge = a >= b
+let both = p && q || r
+let grouped = (a + b) * c

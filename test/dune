@@ -1,0 +1,8 @@
+; test/dune:  parse.exe, the one test executable of Stage A (D-A-16).
+; The executable reads the two libraries of the tree and nothing else.
+; -warn-error +a makes a warning an error (D-A-2).
+
+(executable
+ (name parse)
+ (libraries kite_core kite_surface)
+ (flags (:standard -warn-error +a)))

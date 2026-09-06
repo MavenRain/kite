@@ -1,0 +1,5 @@
+let a = 1
+let b = "hello"
+let c = true
+let d = false
+let u = ()

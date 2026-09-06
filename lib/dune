@@ -1,0 +1,9 @@
+; lib/dune:  kite_core, the core library of M0.
+; The library is unwrapped, so Ident, Label, Literal and Error name
+; themselves in surface/ and in test/ (D-A-2).
+; -warn-error +a makes a warning an error (D-A-2).
+
+(library
+ (name kite_core)
+ (wrapped false)
+ (flags (:standard -warn-error +a)))
