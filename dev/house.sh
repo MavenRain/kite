@@ -24,8 +24,8 @@
 # NOT ban String.get and String.sub, because brief 3.12 does not ban
 # them:  the leg now reads the brief and nothing more (D-A-25).
 #
-# Legs 1 to 6 read lib/, surface/, test/ and bin/, and OCaml sources
-# alone, through the glob '*.ml' (D-A-32).  bin/ joins at the fix round
+# Legs 1 to 6 read lib/, surface/, runtime/, test/ and bin/, including
+# .ml sources and .mli interfaces (D-A-32, M1-A).  bin/ joins at the fix round
 # of review 1:  the driver is OCaml code, so it holds to the OCaml rules.
 # The rules of brief 3.12 are rules about OCaml code, and test/ holds
 # kite fixtures and their goldens:  a fixture writes a wildcard pattern,
@@ -97,7 +97,7 @@ hits () {
   local pat=$1
   shift
   [[ $# -eq 0 ]] && return 0
-  search -n -U --glob '*.ml' -- $pat "$@"
+  search -n -U --glob '*.ml' --glob '*.mli' -- $pat "$@"
 }
 
 # Leg 3 over test/ and bin/, with the one disclosed spelling of D-A-33
@@ -112,8 +112,8 @@ hits_state_test () {
   return 0
 }
 
-all_dirs=(${(f)"$(dirs_of $root/lib $root/surface $root/test $root/bin)"})
-core_dirs=(${(f)"$(dirs_of $root/lib $root/surface)"})
+all_dirs=(${(f)"$(dirs_of $root/lib $root/surface $root/runtime $root/test $root/bin)"})
+core_dirs=(${(f)"$(dirs_of $root/lib $root/surface $root/runtime)"})
 test_dirs=(${(f)"$(dirs_of $root/test)"})
 bin_dirs=(${(f)"$(dirs_of $root/bin)"})
 

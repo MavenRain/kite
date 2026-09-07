@@ -9,5 +9,19 @@
 
 (executables
  (names parse check iface regress)
+ (modules parse check iface regress)
  (libraries kite_core kite_surface kite_elab kite_iface)
  (flags (:standard -warn-error +a)))
+
+(executables
+ (names cluster kubelet)
+ (modules cluster kubelet runtime_suite)
+ (libraries kite_runtime)
+ (flags (:standard -warn-error +a)))
+
+(rule
+ (alias runtest)
+ (action
+  (progn
+   (run %{exe:cluster.exe})
+   (run %{exe:kubelet.exe}))))

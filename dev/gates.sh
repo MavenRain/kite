@@ -1,6 +1,6 @@
 #!/bin/zsh
 # dev/gates.sh
-# The M0 gate battery.  Example:
+# The M0 gate battery and M1-A native runtime checks.  Example:
 #   zsh /Users/oobi/Documents/kite/dev/gates.sh
 #
 # At Stage B seven legs run, BUILD, HOUSE, PARSE, CHECK, TRUSTED-LINES,
@@ -10,6 +10,7 @@
 # round B4 with the corpora they read (D-B-26, D-B-28, D-B-24).  Every
 # other leg of plan section 9 is absent, not stubbed:  a leg with
 # nothing to check is a vacuous pass.
+# M1-A adds RUNTIME for the planner and local Worker lifecycle models.
 #
 # Each leg prints one PASS or FAIL line.  A FAIL adds the leg's captured
 # output under its line.  Every leg runs even when an earlier one failed,
@@ -335,12 +336,35 @@ leg_check () {
   return 0
 }
 
-# TRUSTED-LINES (brief 3.9, D-B-28).  dev/trusted-lines.sh counts the
-# eight believed elaborator files of M0-PLAN.md:135 against the 2,400
-# line budget of D-M0-5.  Under --require a missing file fails, so the
-# leg can never pass over an absent elaborator.  The leg body prints the
-# verdict line, because dev/trusted-lines.sh prints its own count line
-# and no PASS line (D-B-32).
+# RUNTIME checks both native suites.  An empty or failed suite cannot pass.
+leg_runtime () {
+  local out code suite line n ok bad
+  out=$(zsh $ROOT/dev/pin-dune.sh dune build @all 2>&1)
+  code=$?
+  if [[ $code -ne 0 || -n $out ]]; then
+    print -r -- "build exit=$code out=[$out]"
+    print -r -- "FAIL RUNTIME"
+    return 1
+  fi
+  for suite in cluster kubelet; do
+    out=$($ROOT/_build/default/test/$suite.exe 2>&1)
+    code=$?
+    print -r -- "$out"
+    line=$(print -r -- "$out" | rg "^RUNTIME suite=$suite tests=[1-9][0-9]* ok=[1-9][0-9]* fail=0$")
+    n=$(field "$line" tests)
+    ok=$(field "$line" ok)
+    bad=$(field "$line" fail)
+    if [[ $code -ne 0 || -z $line || $n != $ok || $bad != 0 ]]; then
+      print -r -- "FAIL RUNTIME"
+      return 1
+    fi
+  done
+  print -r -- "PASS RUNTIME"
+  return 0
+}
+
+# TRUSTED-LINES retains the eight M0 elaborator files and 2,400-line bound.
+# Under --require an absent elaborator is a failure (D-B-28, D-B-32).
 leg_trusted_lines () {
   local out code
   out=$(zsh $ROOT/dev/trusted-lines.sh --require $ROOT 2>&1)
@@ -548,6 +572,7 @@ if [[ $# -ge 2 && $1 == "--leg" ]]; then
     house) leg_house; exit $? ;;
     parse) leg_parse; exit $? ;;
     check) leg_check; exit $? ;;
+    runtime) leg_runtime; exit $? ;;
     trusted-lines) leg_trusted_lines; exit $? ;;
     denominators) leg_denominators; exit $? ;;
     floor) leg_floor; exit $? ;;
@@ -566,7 +591,7 @@ fail=0
 
 # Line 1 names the tree and line 2 carries the frozen kanon denominators.
 # Both figures come from the sidecar and neither is ever gated.
-print -r -- "GATES kite stage=B root=$ROOT"
+print -r -- "GATES kite stage=M1-A root=$ROOT"
 print -r -- "KANON-DENOM serial_ms=$($PY -P -c 'import json, sys
 d = json.load(open(sys.argv[1]))
 print(d["kanon_ocamlopt_ms_per_kloc"])' $ROOT/dev/denominators.json) parallel_ms=$($PY -P -c 'import json, sys
@@ -607,13 +632,13 @@ leg () {
   return 1
 }
 
-# The seven legs of the Stage B row, in the order of the brief 3.17
-# (D-B-28).  Every leg runs even when an earlier one failed, so one run
-# names every failing leg.
+# The Stage B legs retain their order, with RUNTIME after CHECK.
+# Every leg runs even when an earlier one failed.
 leg MED BUILD SELF zsh $SELF --leg build
 leg FAST HOUSE SELF zsh $SELF --leg house
 leg MED PARSE SELF zsh $SELF --leg parse
 leg MED CHECK SELF zsh $SELF --leg check
+leg MED RUNTIME SELF zsh $SELF --leg runtime
 leg FAST TRUSTED-LINES SELF zsh $SELF --leg trusted-lines
 leg SLOW DENOMINATORS SELF zsh $SELF --leg denominators
 leg SUITE FLOOR SELF zsh $SELF --leg floor

@@ -1,0 +1,9 @@
+RUNTIME suite=cluster tests=33 ok=33 fail=0
+RUNTIME suite=kubelet tests=34 ok=34 fail=0
+MUTATION-KILLED heartbeat-bypass suite=cluster case=heartbeat-boundary-expired build=0 test=1
+MUTATION-KILLED epoch-fence-bypass suite=cluster case=epoch-fence build=0 test=1
+MUTATION-KILLED pod-lock-reservation-bypass suite=cluster case=release-before-replace build=0 test=1
+MUTATION-KILLED pod-lock-grant-bypass suite=kubelet case=lock-denied build=0 test=1
+MUTATION-KILLED pending-epoch-cancel-bypass suite=kubelet case=epoch-cancels-pending build=0 test=1
+MUTATION-KILLED delayed-node-release-bypass suite=kubelet case=late-node-acquisition build=0 test=1
+MUTATIONS tests=6 killed=6 survived=0 unbuildable=0

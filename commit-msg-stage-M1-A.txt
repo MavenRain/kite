@@ -1,0 +1,1 @@
+M1 Stage A: deterministic cluster planning and worker lifecycle

@@ -1,0 +1,44 @@
+GATES kite stage=M1-A root=/Users/oobi/Documents/gpt10/kite-m1
+KANON-DENOM serial_ms=1641.599 parallel_ms=712.803
+PASS BUILD
+HOUSE no-exception OK
+HOUSE no-wildcard-no-partial OK
+HOUSE no-mutable-state OK
+HOUSE no-bool-match-no-loop OK
+HOUSE no-option-match OK
+HOUSE no-bare-division OK
+HOUSE no-em-dash OK
+HOUSE OK
+PASS HOUSE
+PARSE files=46 ok=46 fail=0
+PASS PARSE fixtures=46
+CHECK files=20 pos=13 neg=6 ok=20 fail=0
+REGRESS tests=44 ok=44 fail=0
+PASS CHECK positives=13 twins=6
+RUNTIME suite=cluster tests=33 ok=33 fail=0
+RUNTIME suite=kubelet tests=34 ok=34 fail=0
+PASS RUNTIME
+TRUSTED-LINES elaborator=2374/2400 OK
+PASS TRUSTED-LINES
+denominators.json: OK
+DENOM raw_ms_per_kloc=713.594 median_ms=3550.844 lines=4976 files=19 sha=71878111d71951341a0f16a3fd971f1d108c3f80cbcb4102ba9d02c76a730543
+NUMSHA sha=036cf35467ad2c3775fabc70c6e44891ce6ee1ee585b5bd8ecf49bde759ff3f9 lines=1055 files=1
+PASS DENOMINATORS raw_ms_per_kloc=713.594
+m0-spine.kite: OK
+floor-corpus.txt: OK
+FLOOR pipeline_ms_per_kloc=125.463 floor_ms_per_kloc=1345.600 num_sha=036cf35467ad2c3775fabc70c6e44891ce6ee1ee585b5bd8ecf49bde759ff3f9 flo_sha=d5334cf0b4d1b1a1db5336857c880b40d74aa639449365bfbbd0b81bb345722c num_kloc=1.055 flo_kloc=0.572 host=Onyekachukwus-MacBook-Pro-2.local arch=arm64 load_before=35.21 load_after=33.67 minute_before=2026-09-07T05:40 minute_after=2026-09-07T05:40
+DENOM-FROZEN kanon_serial=1641.599 kanon_parallel=712.803
+WASMGC-ONLY absent at M0
+GATE-OK
+PASS FLOOR
+
+MEASURE BUILD tier=MED elapsed_ms=499.349 exit=0
+MEASURE HOUSE tier=FAST elapsed_ms=231.664 exit=0
+MEASURE PARSE tier=MED elapsed_ms=554.344 exit=0
+MEASURE CHECK tier=MED elapsed_ms=1188.064 exit=0
+MEASURE RUNTIME tier=MED elapsed_ms=518.035 exit=0
+MEASURE TRUSTED-LINES tier=FAST elapsed_ms=534.677 exit=0
+MEASURE DENOMINATORS tier=SLOW elapsed_ms=29826.882 exit=0
+MEASURE FLOOR tier=SUITE elapsed_ms=7764.253 exit=0
+
+GATES-OK

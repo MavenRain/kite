@@ -40,3 +40,6 @@ agent writes in a read-only tree (M0-PLAN.md:151).
 | `dev/gates.sh` | this file | CHANGED in Stage B review | CHECK requires at least thirteen positives and six twins, then runs `test/regress.exe`.  A failed regression fails the leg.  The parser corpus and the timing limits stay fixed. |
 | `dev/run-stage-B.sh` | this file | CHANGED in Stage B review | The runner locates its own tree, owns a unique scratch directory and propagates failed assertions.  A mutant must apply its edit, build successfully and fail the intended semantic check before it counts as killed. |
 | `README.md` | this file | CHANGED in Stage B review | Documents the implemented driver, separate compilation and the seven Stage B gate legs. |
+| `runtime/*.ml`, `runtime/*.mli`, `test/cluster.ml`, `test/kubelet.ml`, `test/runtime_suite.ml` | none | NEW in M1-A | Original native control models and behavioral tests.  Design constraints follow the M1 plan;  no sibling implementation is copied. |
+| `dev/runtime-mutations.py` | none | NEW in M1-A | Builds each deliberate safety regression in a disposable copy and requires its named test to fail. |
+| `dev/gates.sh`, `dev/house.sh` | these files | CHANGED in M1-A | Add the native RUNTIME leg and include runtime sources and interfaces in HOUSE.  Preserve all M0 gate legs and limits. |

@@ -18,8 +18,9 @@ kite/
         subst.ml unify.ml env.ml infer.ml usage.ml error.ml pp.ml
         iface.ml ir.ml lower.ml
   surface/  kite_surface: lexer.ml parser.ml ast.ml print.ml
+  runtime/  kite_runtime: cluster.ml kubelet.ml and their interfaces
   bin/kite.ml  driver: check | build | iface | run | fmt | roundtrip | version
-  test/  parse.exe  check.exe  iface.exe  regress.exe
+  test/  parse.exe  check.exe  iface.exe  regress.exe  cluster.exe  kubelet.exe
   dev/  gates.sh bench.sh denominators.sh denominators.json
         DENOMINATORS.sha256 house.sh pin-dune.sh trusted-lines.sh
         PROVENANCE.md M0-BUILD-LOG.md MUTATION-LOG.md CARRY.md
@@ -31,6 +32,14 @@ lib/literal.ml, lib/error.ml with its Parse arm, surface/ast.ml declared
 whole, surface/lexer.ml, surface/parser.ml, surface/print.ml and
 test/parse.ml.  Stage B adds the checker, the use-count pass, the
 interfaces and the driver.  A source file carries the extension `.kite`.
+
+M1-A adds the native cluster control model.  `Kite_runtime.Cluster`
+plans placements from lock and heartbeat observations and fences plans
+by leader epoch.  `Kite_runtime.Kubelet` tracks local workers from spawn
+through pod-lock acquisition and shutdown, including freeze and resume.
+The browser host will execute its returned actions.  Browser execution,
+IndexedDB transactions and the hidden-tab acceptance run remain in
+M1-B and M1-C, described in [the M1 plan](dev/M1-PLAN.md).
 
 ## Use
 
@@ -44,7 +53,8 @@ verbs are `fmt`, `roundtrip`, `version` and `run`.  Execution through
 
 ## Gates
 
-Stage B runs seven legs, in this order, through one command,
+M1-A runs the seven M0 legs and the new RUNTIME leg, in this order,
+through one command,
 `zsh dev/gates.sh`:
 
 - BUILD:  `zsh dev/pin-dune.sh dune build @all` exits 0 and prints
@@ -61,6 +71,8 @@ Stage B runs seven legs, in this order, through one command,
 - CHECK:  compares the thirteen positive schemes and six refusal
   goldens, checks the spine, and runs semantic regressions for rows,
   value restriction, affine bindings and separate compilation.
+- RUNTIME:  exercises placement, epoch fencing and worker lifecycle
+  traces.  Run it alone with `zsh dev/gates.sh --leg runtime`.
 - TRUSTED-LINES:  keeps the eight elaborator files at or below 2,400
   lines.
 - DENOMINATORS:  verifies the frozen corpus and records the raw compiler
@@ -72,6 +84,10 @@ The frozen kanon denominators are 1,641.599 serial and 712.803 parallel;
 they are printed and never gated.  Every build goes through
 `dev/pin-dune.sh`, which pins
 the `ctxcat-ocaml` opam switch, and through no other switch.
+
+`python3 dev/runtime-mutations.py` verifies the native runtime tests
+against six deliberately broken safety rules.  Each mutant must build
+and fail its named semantic test.  All edits occur in disposable copies.
 
 ## Licence and author
 

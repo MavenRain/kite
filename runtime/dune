@@ -1,0 +1,4 @@
+(library
+ (name kite_runtime)
+ (modules cluster kubelet)
+ (flags (:standard -warn-error +a)))
