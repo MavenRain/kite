@@ -6,6 +6,7 @@ globalThis.KiteNode = class {
     this.options = options;
     this.nodes = new Map();
     this.workers = new Map();
+    this.duplicateRefusals = {count: 0, last: null};
     const initial = model.create(options.nodeId, 1);
     this.state = initial.ok ? initial.state : null;
     this.error = initial.ok ? null : initial.error;
@@ -61,7 +62,8 @@ globalThis.KiteNode = class {
   }
   async spawned(worker) {
     if (!this.current(worker, 'starting')) return;
-    const handle = {worker, epoch: this.view().epoch, place: null, published: false};
+    const handle = {worker, epoch: this.view().epoch, place: null, published: false,
+      startedAt: Date.now()};
     const result = this.glue.spawn(this.options.podUrl,
       message => this.message(handle, message), () => this.stop(worker));
     if (!result.ok) {
@@ -83,6 +85,11 @@ globalThis.KiteNode = class {
     }
     if (message.kind === 'pod_lock') {
       if (!this.current(worker, 'starting')) return;
+      if (message.granted === false) {
+        this.duplicateRefusals.count += 1;
+        this.duplicateRefusals.last = {pod: worker.pod, ticket: worker.ticket,
+          incarnation: worker.incarnation, exited: false};
+      }
       await this.event({kind: 'pod_lock', ticket: worker.ticket, granted: message.granted});
     } else if (message.kind === 'tick' && this.current(worker, 'running') && handle.published) {
       handle.lastTick = Date.now();
@@ -113,20 +120,35 @@ globalThis.KiteNode = class {
   async terminate(worker) {
     const handle = this.workers.get(worker.ticket);
     if (!handle) { await this.event({kind: 'worker_exited', ticket: worker.ticket}); return; }
-    const killed = this.glue.kill(handle.native);
-    if (!killed.ok) { this.error = killed.error; return; }
-    if (handle.place) await handle.place.release();
-    handle.place = null;
-    const marker = this.name('life', `${this.options.nodeId}:${worker.ticket}`);
-    const observe = async () => {
+    if (handle.terminating) return handle.terminating;
+    const retry = () => {
+      if (handle.retrying) return;
+      handle.retrying = true;
+      setTimeout(() => {
+        handle.retrying = false;
+        if (this.workers.get(worker.ticket) === handle) return this.terminate(worker);
+      }, 20);
+    };
+    handle.terminating = (async () => {
+      if (this.workers.get(worker.ticket) !== handle) return;
+      if (!handle.killed) {
+        const killed = this.glue.kill(handle.native);
+        if (!killed.ok) { this.error = killed.error; retry(); return; }
+        handle.killed = true;
+      }
+      if (handle.place) await handle.place.release();
+      handle.place = null;
+      const marker = this.name('life', `${this.options.nodeId}:${worker.ticket}`);
       const locks = await this.glue.locks();
-      if (!locks.ok) { this.error = locks.error; return; }
-      if (locks.value.includes(marker)) { setTimeout(observe, 20); return; }
+      if (!locks.ok) { this.error = locks.error; retry(); return; }
+      if (locks.value.includes(marker)) { retry(); return; }
       if (this.workers.get(worker.ticket) !== handle) return;
       this.workers.delete(worker.ticket);
+      const refusal = this.duplicateRefusals.last;
+      if (refusal && refusal.ticket === worker.ticket) refusal.exited = true;
       await this.event({kind: 'worker_exited', ticket: worker.ticket});
-    };
-    await observe();
+    })().finally(() => { handle.terminating = undefined; });
+    return handle.terminating;
   }
   async effect(action) {
     const worker = action.worker;
@@ -161,7 +183,11 @@ globalThis.KiteNode = class {
   }
   async watchdog(now) {
     for (const handle of this.workers.values()) {
-      if (handle.published && now - handle.lastTick >= 5000) await this.stop(handle.worker);
+      const worker = this.view().workers.find(current => current.ticket === handle.worker.ticket);
+      if (!worker) continue;
+      if (worker.phase === 'stopping') await this.terminate(handle.worker);
+      else if (now - (handle.published ? handle.lastTick : handle.startedAt) >= 5000)
+        await this.stop(handle.worker);
     }
   }
 };

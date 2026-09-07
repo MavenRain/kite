@@ -330,7 +330,7 @@ g12 () {
   cp $REPO/test/pos/lam-app.kite $d/spine.kite || return 1
   local -a verbs patterns
   verbs=(check build iface roundtrip)
-  patterns=('^CHECK-OK files=1$' '^BUILD-OK file=.+ ir=.+ bytes=[1-9][0-9]*$'
+  patterns=('^CHECK-OK files=1$' '^BUILD-OK file=.+ ir=.+ bytes=[1-9][0-9]* artifact=.+[.]kite[.]js$'
             '^IFACE-OK file=.+ exports=[0-9]+$' '^ROUNDTRIP-OK file=.+$')
   local v i=1
   for v in $verbs; do
@@ -340,8 +340,12 @@ g12 () {
     i=$(( i + 1 ))
   done
   out=$($REPO/_build/default/bin/kite.exe run 2>&1); code=$?
+  print -r -- "SB-G12 run-missing-file exit=$code [$out]"
+  [[ $code -eq 2 && $out == 'usage: kite check build iface run fmt roundtrip version' ]] || failed=1
+  print -r -- 'let result = 6 * 7' > $d/run.kite
+  out=$($REPO/_build/default/bin/kite.exe run $d/run.kite 2>&1); code=$?
   print -r -- "SB-G12 run exit=$code [$out]"
-  [[ $code -eq 2 && $out == 'run arrives at M1' ]] || failed=1
+  [[ $code -eq 0 && $out == 'RUN-OK value=42' && -s $d/spine.kite.js ]] || failed=1
   $REPO/_build/default/bin/kite.exe fmt $d/spine.kite > $d/fmt1.out || failed=1
   $REPO/_build/default/bin/kite.exe fmt $d/fmt1.out > $d/fmt2.out || failed=1
   if cmp -s $d/fmt1.out $d/fmt2.out; then

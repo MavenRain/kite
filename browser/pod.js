@@ -1,17 +1,19 @@
-/* A host-test payload.  Source-language Wasm emission arrives later. */
+/* M1 uses the fixed Stage 0 workload, step(200000), in each nested pod.
+   Bytes compiled from tab-cluster-spike/web/pod.wat, see PROVENANCE.md. */
 importScripts('glue.js');
 const glue = globalThis.KiteGlue;
 let initialized = false;
 let acquired = false;
 let running = false;
-let value = 0;
-let increment;
+let step;
 let lifeLease;
 let podLease;
 const bytes = new Uint8Array([
   0,97,115,109,1,0,0,0,1,6,1,96,1,127,1,127,
-  3,2,1,0,7,8,1,4,116,105,99,107,0,0,
-  10,9,1,7,0,32,0,65,1,106,11
+  3,2,1,0,7,8,1,4,115,116,101,112,0,0,
+  10,40,1,38,1,2,127,2,64,3,64,32,1,32,0,79,13,1,
+  32,2,32,1,65,7,108,106,33,2,32,1,65,1,106,33,1,12,0,
+  11,11,32,2,11
 ]);
 async function init(message) {
   if (initialized) return;
@@ -30,7 +32,7 @@ async function init(message) {
   glue.send(self, {kind: 'pod_lock', granted: acquired});
   if (!acquired) { await lifeLease.release(); return; }
   const result = await WebAssembly.instantiate(bytes).then(
-    module => ({ok: true, value: module.instance.exports.tick}),
+    module => ({ok: true, value: module.instance.exports.step}),
     () => ({ok: false}));
   if (!result.ok || typeof result.value !== 'function') {
     acquired = false;
@@ -40,13 +42,12 @@ async function init(message) {
     glue.send(self, {kind: 'failed', error: 'wasm_init_failed'});
     return;
   }
-  increment = result.value;
+  step = result.value;
   if (running) tick();
 }
 function tick() {
-  if (!running || !increment) return;
-  value = increment(value);
-  glue.send(self, {kind: 'tick', value});
+  if (!running || !step) return;
+  glue.send(self, {kind: 'tick', value: step(200000)});
   setTimeout(tick, 250);
 }
 glue.listen(message => {

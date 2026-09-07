@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Every timed sample emits the compiler IR and the browser control artifact.
+# Every sample emits source IR, its executable artifact and both browser bridges.
 set -eu
 chpwd_functions=()
 unfunction chpwd 2>/dev/null || true
@@ -12,5 +12,9 @@ mkdir -p "$work/browser" "$work/_build/default/browser"
 "$root/_build/default/bin/kite.exe" build "$work/program.kite"
 zsh "$root/dev/pin-dune.sh" js_of_ocaml \
   "$root/_build/default/browser/model.bc" -o "$work/_build/default/browser/model.bc.js"
+zsh "$root/dev/pin-dune.sh" js_of_ocaml \
+  "$root/_build/default/browser/program.bc" -o "$work/_build/default/browser/program.bc.js"
 cp "$root"/browser/*.js "$root/browser/index.html" "$work/browser/"
-[[ -s "$work/program.kir" && -s "$work/_build/default/browser/model.bc.js" ]]
+[[ -s "$work/program.kir" && -s "$work/program.kite.js" && \
+   -s "$work/_build/default/browser/model.bc.js" && \
+   -s "$work/_build/default/browser/program.bc.js" ]]

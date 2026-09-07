@@ -14,9 +14,9 @@
  (flags (:standard -warn-error +a)))
 
 (executables
- (names cluster kubelet)
- (modules cluster kubelet runtime_suite)
- (libraries kite_runtime)
+ (names cluster kubelet eval_test)
+ (modules cluster kubelet eval_test runtime_suite)
+ (libraries kite_runtime kite_execution kite_artifact kite_core kite_surface kite_elab)
  (flags (:standard -warn-error +a)))
 
 (rule
@@ -24,4 +24,5 @@
  (action
   (progn
    (run %{exe:cluster.exe})
-   (run %{exe:kubelet.exe}))))
+   (run %{exe:kubelet.exe})
+   (run %{exe:eval_test.exe}))))

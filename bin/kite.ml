@@ -4,17 +4,17 @@
      check FILE...      prints CHECK-OK files=N, exit 0, and takes the
                         repeatable option --iface PATH
      build FILE         parse, check, lower and emit, and prints
-                        BUILD-OK file=PATH ir=PATH bytes=N
+                        BUILD-OK file=PATH ir=PATH bytes=N artifact=PATH
      iface FILE         writes FILE.coi and prints
                         IFACE-OK file=PATH exports=N
-     run                prints run arrives at M1 and exits 2
+     run FILE           executes checked IR and prints RUN-OK value=VALUE
      fmt FILE           prints the canonical form of surface/print.ml
      roundtrip FILE     prints ROUNDTRIP-OK file=PATH or ROUNDTRIP-FAIL
      version            prints kite 0.1.0 ocaml 5.3.0 dune 3.24.0
 
    No verb and an unknown verb both print the seven verb names and exit
-   2.  The run verb runs NOTHING:  the machine arrives at M1
-   (M0-PLAN.md:39).
+   2. Native run reports host calls as unavailable. The browser driver
+   executes the same machine with explicit asynchronous host replies.
 
    D-B-66:  a verb that names no file prints the verb names and exits 2,
    and never prints an OK line over an empty file list.  Reason:  brief
@@ -22,8 +22,9 @@
    driver, and the driver holds the same guard.
 
    The build verb writes the lowered IR BESIDE the source with the
-   extension .kir (D-B-17).  That file is build output:  round B4 adds
-   the one *.kir row to .gitignore (brief 3.19).
+   extension .kir (D-B-17), and the checked executable data as .kite.js.
+   Both are ignored build outputs. Artifact restrictions apply after
+   the unchanged M0 checker has accepted the source.
 
    Reading argv.  Sys.argv is an array and the house guard bans the
    Array module, with the one disclosed spelling Array.to_list Sys.argv
@@ -32,6 +33,8 @@
    other use of the Array module here fails the gate. *)
 
 module Coi = Kite_iface.Iface
+module Execution = Kite_execution.Eval
+module Artifact = Kite_artifact.Artifact
 
 let ( let* ) (x : ('a, Error.t) result) (f : 'a -> ('b, Error.t) result)
   : ('b, Error.t) result =
@@ -157,14 +160,18 @@ let build_one (path : string) : int =
     (let* p = parse_file path in
      let* (_env, _s) = check_prog Env.empty p in
      let* ir = Lower.prog p in
+     let* artifact = Result.map_error Error.not_yet (Artifact.of_program p) in
      let text = Pp.prog ir in
      let out = sibling path ".kir" in
      let () = write_file out text in
+     let executable = sibling path ".kite.js" in
+     let () = write_file executable (Artifact.javascript artifact) in
      let () =
        say
          [ "BUILD-OK";  String.concat "" [ "file=";  path ];
            String.concat "" [ "ir=";  out ];
-           field "bytes=" (String.length text)
+           field "bytes=" (String.length text);
+           "artifact=" ^ executable
          ] in
      Ok 0)
 
@@ -187,11 +194,15 @@ let iface_one (path : string) : int =
          ] in
      Ok 0)
 
-let verb_run () : int =
-  (* The run verb runs NOTHING at M0:  the machine arrives at M1
-     (M0-PLAN.md:39, D-B-16). *)
-  let () = say [ "run";  "arrives";  "at";  "M1" ] in
-  2
+let run_one path =
+  let prepared = let* p = parse_file path in
+    let* (_env, _subst) = check_prog Env.empty p in
+    Result.map_error Error.not_yet (Artifact.of_program p) in
+  Result.fold ~error:(fun error -> report error; 1) ~ok:(fun program ->
+    Result.fold
+      ~error:(fun error -> say ["RUNTIME-ERROR"; Execution.error_text error]; 1)
+      ~ok:(fun value -> say ["RUN-OK"; "value=" ^ Execution.value_text value]; 0)
+      (Execution.native (Execution.start program))) prepared
 
 let fmt_one (path : string) : int =
   Result.fold
@@ -243,7 +254,7 @@ let dispatch (v : string) (args : string list) : int =
   | () when String.equal v "check" -> verb_check args
   | () when String.equal v "build" -> over_one build_one args
   | () when String.equal v "iface" -> over_one iface_one args
-  | () when String.equal v "run" -> verb_run ()
+  | () when String.equal v "run" -> over_one run_one args
   | () when String.equal v "fmt" -> over_one fmt_one args
   | () when String.equal v "roundtrip" -> over_one roundtrip_one args
   | () when String.equal v "version" -> verb_version ()

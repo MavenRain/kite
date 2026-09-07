@@ -26,8 +26,8 @@ async function until(predicate) {
 function control(options = {}) {
   const f = { replies: [], timers: [], workers: [], held: new Map(),
     elections: [], claims: [], writes: [], opens: 0, closes: 0,
-    nodeRequests: 0, releases: [], readStarted: deferred(), placedStarted: deferred(),
-    openStarted: deferred(), ...options };
+    nodeRequests: 0, now: 1700000100000, releases: [], readStarted: deferred(), placedStarted: deferred(),
+    openStarted: deferred(), heartbeatStarted: deferred(), ...options };
   let listener;
   let nextId = 0;
   const state = { epoch: 1, seq: 0, owner: 'previous', entries: [] };
@@ -75,6 +75,12 @@ function control(options = {}) {
         f.placedStarted.resolve();
         await f.placedGate.promise;
       }
+      if (payload.kind === 'heartbeat' && f.heartbeatGate) {
+        const gate = f.heartbeatGate;
+        f.heartbeatGate = undefined;
+        f.heartbeatStarted.resolve();
+        await gate.promise;
+      }
       if (epoch !== state.epoch) return { ok: false, error: 'stale_epoch' };
       if (expectedSeq !== undefined && expectedSeq !== state.seq)
         return { ok: false, error: 'stale_sequence' };
@@ -107,6 +113,12 @@ function control(options = {}) {
         f.nodeRequests += 1;
         if (f.failFirstNode && f.nodeRequests === 1)
           return Promise.resolve({ ok: true, value: null });
+        if (f.nodeGate) {
+          const gate = f.nodeGate;
+          f.nodeGate = undefined;
+          return gate.promise.then(() => ({ ok: true,
+            value: f.held.has(name) ? null : lease(name) }));
+        }
       }
       return Promise.resolve({ ok: true, value: f.held.has(name) ? null : lease(name) });
     },
@@ -125,6 +137,7 @@ function control(options = {}) {
     kill(worker) { worker.killed = true; return { ok: true }; }
   };
   const world = { KiteGlue: glue, TextDecoder, TextEncoder, AbortController,
+    Date: class extends Date { static now() { return f.now; } },
     importScripts() {}, self: {}, console,
     setTimeout(callback, delay) { f.timers.push({ callback, delay }); } };
   vm.createContext(world);
@@ -195,6 +208,128 @@ test('a claim completed after freeze cannot install leadership after resume', as
   await f.request('close');
 });
 
+test('a reconcile snapshot taken before an epoch claim retains the newly adopted leader', async () => {
+  const f = control();
+  assert.equal((await f.boot()).ok, true);
+  await until(() => f.writes.some(write => write.payload.kind === 'heartbeat'));
+  f.elections[0].grant();
+  await until(() => f.claims.length === 1);
+  const read = deferred();
+  f.readGate = read;
+  const reconciliation = f.runLoop();
+  await f.readStarted.promise;
+  f.claims[0].resolve();
+  await until(async () => (await f.request('view')).value.leaderEpoch === 2);
+  read.resolve();
+  await reconciliation;
+  assert.equal((await f.request('view')).value.leaderEpoch, 2);
+  assert.equal(f.releases.filter(name => name.endsWith(':leader')).length, 0);
+  assert.equal(f.elections.length, 1);
+  await f.request('close');
+});
+
+test('a resume during an open heartbeat append republishes the new incarnation', async () => {
+  const f = control();
+  assert.equal((await f.boot()).ok, true);
+  await until(() => f.writes.some(write => write.payload.kind === 'heartbeat'));
+  f.now += 1000;
+  const gate = deferred();
+  f.heartbeatGate = gate;
+  const cycle = f.runLoop();
+  await f.heartbeatStarted.promise;
+  assert.equal((await f.request('freeze')).ok, true);
+  assert.equal((await f.request('resume')).ok, true);
+  gate.resolve();
+  await cycle;
+  await f.runLoop();
+  assert.equal(f.writes.some(write => write.payload.kind === 'heartbeat' &&
+    write.payload.incarnation === 2), true);
+  await f.request('close');
+});
+
+test('a desired count written across an epoch claim is retried, not discarded', async () => {
+  const f = control();
+  assert.equal((await f.boot()).ok, true);
+  await until(() => f.writes.some(write => write.payload.kind === 'heartbeat'));
+  f.elections[0].grant();
+  await until(() => f.claims.length === 1);
+  const read = deferred();
+  f.readGate = read;
+  const desired = f.request('desired', { count: 3 });
+  await f.readStarted.promise;
+  f.claims[0].resolve();
+  await until(async () => (await f.request('view')).value.leaderEpoch === 2);
+  read.resolve();
+  assert.equal((await desired).ok, true);
+  assert.equal(f.writes.some(write => write.payload.kind === 'desired' &&
+    write.payload.count === 3), true);
+  await f.request('close');
+});
+
+test('a malformed request is refused with its own correlation id', async () => {
+  const f = control();
+  assert.equal((await f.request(5)).error, 'invalid_request');
+  assert.equal((await f.request('boot')).error, 'invalid_cluster');
+});
+
+test('a later freeze cancels a resume waiting for an earlier freeze', async () => {
+  const f = control();
+  assert.equal((await f.boot()).ok, true);
+  f.elections[0].grant();
+  await until(() => f.claims.length === 1);
+  const firstFreeze = f.request('freeze');
+  const resume = f.request('resume');
+  const lastFreeze = f.request('freeze');
+  f.claims[0].resolve();
+  assert.equal((await firstFreeze).ok, true);
+  assert.equal((await lastFreeze).ok, true);
+  assert.equal((await resume).error, 'lifecycle_changed');
+  const view = (await f.request('view')).value.node;
+  assert.equal(view.mode, 'frozen');
+  assert.equal(view.nodeLock, false);
+  assert.equal(f.nodeRequests, 1);
+  await f.request('close');
+});
+
+test('a freeze invalidates a resume waiting for its node lease', async () => {
+  const f = control();
+  assert.equal((await f.boot()).ok, true);
+  assert.equal((await f.request('freeze')).ok, true);
+  const node = deferred();
+  f.nodeGate = node;
+  const resumed = f.request('resume');
+  await until(() => f.nodeRequests === 2);
+  assert.equal((await f.request('freeze')).ok, true);
+  node.resolve();
+  assert.equal((await resumed).error, 'lifecycle_changed');
+  const view = (await f.request('view')).value.node;
+  assert.equal(view.mode, 'frozen');
+  assert.equal(view.nodeLock, false);
+  assert.equal(f.held.has('kite:test:node:a'), false);
+  await f.request('close');
+});
+
+test('concurrent resumes share their pending node acquisition', async () => {
+  const f = control();
+  assert.equal((await f.boot()).ok, true);
+  assert.equal((await f.request('freeze')).ok, true);
+  const node = deferred();
+  f.nodeGate = node;
+  const first = f.request('resume');
+  await until(() => f.nodeRequests === 2);
+  const second = f.send('resume');
+  await tick();
+  assert.equal(f.replies.some(reply => reply.id === second), false);
+  node.resolve();
+  assert.equal((await first).ok, true);
+  assert.equal((await f.response(second)).ok, true);
+  const view = (await f.request('view')).value.node;
+  assert.equal(view.incarnation, 2);
+  assert.equal(view.nodeLock, true);
+  assert.equal(f.nodeRequests, 2);
+  await f.request('close');
+});
+
 test('freeze and close bypass unresolved reconciliation and publication', async () => {
   const placed = deferred();
   const read = deferred();
@@ -246,6 +381,10 @@ test('replay does not start a pod removed by a later desired record', async () =
   assert.equal((await f.boot()).ok, true);
   await f.runLoop();
   assert.equal(f.workers.length, 0);
+  const view = (await f.request('view')).value;
+  assert.ok(view.cursor >= 3);
+  assert.equal(view.duplicateRefusals.count, 0);
+  assert.equal(view.duplicateRefusals.last, null);
   await f.request('close');
 });
 
@@ -282,7 +421,7 @@ test('real Wasm starts once when begin arrives before compilation completes', as
   f.send(null);
   f.init();
   await until(() => f.messages.some(message => message.kind === 'tick'));
-  assert.equal(f.messages.find(message => message.kind === 'tick').value, 1);
+  assert.equal(f.messages.find(message => message.kind === 'tick').value, -1734620768);
   assert.equal(f.timers.length, 1);
   f.send({ kind: 'begin' });
   f.init();

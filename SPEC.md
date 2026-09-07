@@ -374,9 +374,9 @@ line and its exit code.
 | verb | printed line | exit |
 | --- | --- | --- |
 | `check FILE...` | `CHECK-OK files=N`, or one error line per failure | 0, or 1 |
-| `build FILE` | `BUILD-OK file=PATH ir=PATH bytes=N` | 0, or 1 |
+| `build FILE` | `BUILD-OK file=PATH ir=PATH bytes=N artifact=PATH` | 0, or 1 |
 | `iface FILE` | `IFACE-OK file=PATH exports=N` | 0 |
-| `run` | `run arrives at M1` | 2 |
+| `run FILE` | `RUN-OK value=VALUE`, or an error | 0, or 1 |
 | `fmt FILE` | the canonical form of `surface/print.ml` | 0 |
 | `roundtrip FILE` | `ROUNDTRIP-OK file=PATH` or `ROUNDTRIP-FAIL file=PATH` | 0, or 1 |
 | `version` | `kite 0.1.0 ocaml 5.3.0 dune 3.24.0` | 0 |
@@ -393,7 +393,32 @@ writes the lowered IR beside the source with the extension `.kir`, so
 is build output:  `.gitignore` holds the row `*.kir`, so it is never
 tracked and never left in the porcelain.
 
-The `run` verb runs NOTHING.  The machine arrives at M1.
+At M1-C, `build` also writes a sibling `.kite.js` checked-data artifact.
+The browser executes it through `KiteProgram` and `KiteSource`, using the
+same OCaml evaluator as native `run`. `run FILE` checks and executes the
+source, printing the last ordinary binding's value. Runtime failures
+print `RUNTIME-ERROR` and a named reason. An unavailable native host import
+is an explicit failure. Executable preparation failures use `NotYet`.
+
+Execution uses signed 32-bit integers, wrapping arithmetic, guarded
+division and remainder, and short-circuit Boolean operators. Out-of-range
+integer literals are refused during executable preparation. Recursive
+groups require lambda bodies; non-function recursive initialization is
+refused. Imports in executable programs are unary functions over closed
+first-order primitive, record or variant data, with distinct field names
+in host records. Scoped record occurrences within source remain supported.
+Freeze declarations are deferred and do not execute during initialization;
+checkpoint and drain integration remains M2.
+
+Executable expression, pattern and host-contract nesting has a maximum
+depth of 256, with the root at zero. Deeper structures return
+`artifact_depth` during preparation or browser decoding. This limit does
+not bound dynamic function recursion.
+
+The seven M1 declaration keywords in the original refusal table still
+name later source-surface integration. M1-C expresses its acceptance
+program through ordinary functions and typed host imports; it does not
+assign ad hoc semantics to the opaque declaration payloads.
 
 No verb and an unknown verb both print the seven verb names and exit 2,
 so an empty file list can never read as a pass.

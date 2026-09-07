@@ -12,6 +12,7 @@
 # nothing to check is a vacuous pass.
 # M1-A adds RUNTIME for the planner and local Worker lifecycle models.
 # M1-B adds BROWSER and js_of_ocaml emission to each FLOOR sample.
+# M1-C adds source execution and full hidden-tab acceptance.
 #
 # Each leg prints one PASS or FAIL line.  A FAIL adds the leg's captured
 # output under its line.  Every leg runs even when an earlier one failed,
@@ -81,6 +82,8 @@ FAST=10
 MED=30
 SLOW=120
 SUITE=300
+# Includes the mandatory 306 second hidden aging period and six scenarios.
+M1=600
 
 # The fixture count of the PARSE leg.  D-B-27 pins the count EXACTLY at
 # Stage B:  a short list is a FAIL and never a loose pass, so the leg
@@ -364,18 +367,47 @@ leg_runtime () {
   return 0
 }
 
+leg_source () {
+  local out code line n ok bad
+  out=$(zsh $ROOT/dev/pin-dune.sh dune build bin/kite.exe test/eval_test.exe browser/program.bc.js 2>&1)
+  code=$?
+  if [[ $code -ne 0 ]]; then
+    print -r -- "$out"
+    print -r -- "FAIL SOURCE"
+    return 1
+  fi
+  out=$($ROOT/_build/default/test/eval_test.exe 2>&1)
+  code=$?
+  print -r -- "$out"
+  line=$(print -r -- "$out" | rg '^RUNTIME suite=eval ')
+  n=$(field "$line" tests)
+  ok=$(field "$line" ok)
+  bad=$(field "$line" fail)
+  if [[ $code -ne 0 || -z $line || $n != $ok || $bad != 0 || ${n:-0} -lt 32 ]]; then
+    print -r -- "FAIL SOURCE"
+    return 1
+  fi
+  out=$(node --test --test-reporter=tap $ROOT/test/program.test.mjs 2>&1)
+  code=$?
+  print -r -- "$out"
+  if [[ $code -ne 0 ]]; then print -r -- "FAIL SOURCE"; return 1; fi
+  print -r -- "EXECUTION-LINES evaluator=$(wc -l < $ROOT/runtime/eval.ml | tr -d ' ') encoder=$(wc -l < $ROOT/runtime/artifact.ml | tr -d ' ') bridge=$(wc -l < $ROOT/browser/program.ml | tr -d ' ')"
+  print -r -- "PASS SOURCE"
+  return 0
+}
+
 # Browser state races and actual Workers, Web Locks and IndexedDB.
 leg_browser () {
   local out code
-  out=$(python3 $ROOT/dev/browser-audit.py 2>&1)
+  out=$($PY $ROOT/dev/browser-audit.py 2>&1)
   code=$?
   print -r -- "$out"
   if [[ $code -ne 0 ]]; then print -r -- "FAIL BROWSER"; return 1; fi
-  out=$(python3 $ROOT/test/browser-audit.test.py 2>&1)
+  out=$($PY $ROOT/test/browser-audit.test.py 2>&1)
   code=$?
   print -r -- "$out"
   if [[ $code -ne 0 ]]; then print -r -- "FAIL BROWSER"; return 1; fi
-  out=$(node --test --test-reporter=tap $ROOT/test/glue.test.mjs $ROOT/test/node-host.test.mjs $ROOT/test/control.test.mjs 2>&1)
+  out=$(node --test --test-reporter=tap $ROOT/test/glue.test.mjs $ROOT/test/node-host.test.mjs $ROOT/test/control.test.mjs $ROOT/test/source.test.mjs $ROOT/test/acceptance-bridge-test.mjs 2>&1)
   code=$?
   print -r -- "$out"
   if [[ $code -ne 0 ]]; then print -r -- "FAIL BROWSER"; return 1; fi
@@ -387,6 +419,24 @@ leg_browser () {
     return 0
   fi
   print -r -- "FAIL BROWSER"
+  return 1
+}
+
+# The source corpus controls every scenario. Quick mode cannot satisfy this leg.
+leg_acceptance () {
+  local out code
+  out=$($ROOT/_build/default/bin/kite.exe build $ROOT/test/acceptance.kite 2>&1)
+  code=$?
+  print -r -- "$out"
+  if [[ $code -ne 0 ]]; then print -r -- "FAIL ACCEPTANCE"; return 1; fi
+  out=$(node $ROOT/dev/drive.mjs 2>&1)
+  code=$?
+  print -r -- "$out"
+  if [[ $code -eq 0 ]] && print -r -- "$out" | rg -q '^M1-OK behaviors=6 hidden-threshold-ms=306000 pod-work-limit-ms=3000 leader-view-limit-ms=5000$'; then
+    print -r -- "PASS ACCEPTANCE"
+    return 0
+  fi
+  print -r -- "FAIL ACCEPTANCE"
   return 1
 }
 
@@ -576,8 +626,8 @@ leg_floor () {
   flo_per=$(awk -v m="$flo" -v k="$flo_kloc" 'BEGIN { printf "%.3f\n", (k + 0 > 0) ? m / k : 0 }')
   print -r -- "FLOOR pipeline_ms_per_kloc=$pipe_per floor_ms_per_kloc=$flo_per num_sha=$num_sha flo_sha=$flo_sha num_kloc=$num_kloc flo_kloc=$flo_kloc host=$(hostname) arch=$(uname -m) load_before=$l1 load_after=$l2 minute_before=$m1 minute_after=$m2"
   print -r -- "DENOM-FROZEN kanon_serial=1641.599 kanon_parallel=712.803"
-  print -r -- "PIPELINE includes=check,lower,js_of_ocaml,browser-assets"
-  print -r -- "WASMGC-ONLY not measured, browser pods use a host-test Wasm fixture"
+  print -r -- "PIPELINE includes=check,lower,source-artifact,js_of_ocaml-control,js_of_ocaml-evaluator,browser-assets"
+  print -r -- "WASMGC-ONLY not measured, M1 retains the fixed Stage 0 Wasm workload"
   pass=$(awk -v a="$pipe_per" -v b="$flo_per" 'BEGIN { print (a <= b) ? "yes" : "no" }')
   if [[ $pass == "yes" ]]; then
     print -r -- "GATE-OK"
@@ -601,7 +651,9 @@ if [[ $# -ge 2 && $1 == "--leg" ]]; then
     parse) leg_parse; exit $? ;;
     check) leg_check; exit $? ;;
     runtime) leg_runtime; exit $? ;;
+    source) leg_source; exit $? ;;
     browser) leg_browser; exit $? ;;
+    acceptance) leg_acceptance; exit $? ;;
     trusted-lines) leg_trusted_lines; exit $? ;;
     denominators) leg_denominators; exit $? ;;
     floor) leg_floor; exit $? ;;
@@ -620,7 +672,7 @@ fail=0
 
 # Line 1 names the tree and line 2 carries the frozen kanon denominators.
 # Both figures come from the sidecar and neither is ever gated.
-print -r -- "GATES kite stage=M1-B root=$ROOT"
+print -r -- "GATES kite stage=M1-C root=$ROOT"
 print -r -- "KANON-DENOM serial_ms=$($PY -P -c 'import json, sys
 d = json.load(open(sys.argv[1]))
 print(d["kanon_ocamlopt_ms_per_kloc"])' $ROOT/dev/denominators.json) parallel_ms=$($PY -P -c 'import json, sys
@@ -668,7 +720,9 @@ leg FAST HOUSE SELF zsh $SELF --leg house
 leg MED PARSE SELF zsh $SELF --leg parse
 leg MED CHECK SELF zsh $SELF --leg check
 leg MED RUNTIME SELF zsh $SELF --leg runtime
+leg MED SOURCE SELF zsh $SELF --leg source
 leg SLOW BROWSER SELF zsh $SELF --leg browser
+leg M1 ACCEPTANCE SELF zsh $SELF --leg acceptance
 leg FAST TRUSTED-LINES SELF zsh $SELF --leg trusted-lines
 leg SLOW DENOMINATORS SELF zsh $SELF --leg denominators
 leg SUITE FLOOR SELF zsh $SELF --leg floor

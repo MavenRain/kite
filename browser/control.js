@@ -16,6 +16,7 @@ let closed = false;
 let generation = 0;
 let queue = Promise.resolve();
 let freezing;
+let resuming;
 const ticks = new Map();
 // Seconds from a fixed origin fit the shared js_of_ocaml integer range.
 const nowTick = () => Math.floor(Date.now() / 1000) - 1700000000;
@@ -112,13 +113,16 @@ async function reconcile() {
       nodeId: host.view().nodeId, incarnation: host.view().incarnation,
       heartbeat: now, phase: 'active'});
     if (!saved.ok) return saved;
-    heartbeat = now;
+    // A freeze may have run while the append was open. Its resume resets the
+    // heartbeat, so this cycle records the tick only while it is still fresh.
     if (!current()) return {ok: true};
+    heartbeat = now;
   }
   const watched = await host.watchdog(Date.now());
   if (watched && !watched.ok) return watched;
   if (!current()) return {ok: true};
-  if (leader && leaderEpoch !== lastRead.epoch) {
+  // The election may have claimed its epoch after this cycle took its snapshot.
+  if (leader && leaderEpoch < lastRead.epoch) {
     const held = leader;
     leader = null;
     leaderEpoch = 0;
@@ -155,8 +159,8 @@ async function loop() {
   if (!closed) setTimeout(loop, 250);
 }
 function freeze() {
-  if (freezing) return freezing;
   generation += 1;
+  if (freezing) return freezing;
   const pending = election;
   if (pending) pending.abort.abort();
   const held = leader;
@@ -169,6 +173,23 @@ function freeze() {
       result.ok && released && !released.ok ? released : result)
     .finally(() => { freezing = undefined; });
   return freezing;
+}
+function resume() {
+  if (resuming && resuming.generation === generation) return resuming.done;
+  const attempt = {generation};
+  resuming = attempt;
+  attempt.done = (async () => {
+    if (freezing) await freezing;
+    if (closed) return {ok: false, error: 'closed'};
+    if (generation !== attempt.generation) return {ok: false, error: 'lifecycle_changed'};
+    const result = await host.event({kind: 'resume'});
+    if (closed) return {ok: false, error: 'closed'};
+    if (generation !== attempt.generation) return {ok: false, error: 'lifecycle_changed'};
+    if (result.ok && !host.view().nodeLock) return {ok: false, error: 'node_unavailable'};
+    if (result.ok) { heartbeat = -1; elect(); }
+    return result;
+  })().finally(() => { if (resuming === attempt) resuming = undefined; });
+  return attempt.done;
 }
 async function request(message) {
   if (message.op === 'boot') {
@@ -210,23 +231,24 @@ async function request(message) {
   if (closed && message.op !== 'view' && message.op !== 'close')
     return {ok: false, error: 'closed'};
   switch (message.op) {
-    case 'view': return {ok: true, value: {node: host.view(), leaderEpoch,
+    case 'view': return {ok: true, value: {node: host.view(), leaderEpoch, cursor,
+      duplicateRefusals: host.duplicateRefusals,
       log: lastRead, planning: lastPlan, ticks: [...ticks.values()], error: host.error}};
     case 'desired': {
       if (!Number.isInteger(message.count) || message.count < 0 || message.count > 64)
         return {ok: false, error: 'invalid_desired'};
       const read = await store.read();
-      return read.ok ? append(read.value.epoch, {kind: 'desired', count: message.count}) : read;
+      if (!read.ok) return read;
+      const payload = {kind: 'desired', count: message.count};
+      const saved = await append(read.value.epoch, payload);
+      if (saved.ok || saved.error !== 'stale_epoch') return saved;
+      // An election claimed a new epoch while this read was open. Retry once
+      // at the epoch the log now holds, so the count is not discarded.
+      const fresh = await store.read();
+      return fresh.ok ? append(fresh.value.epoch, payload) : fresh;
     }
     case 'freeze': return freeze();
-    case 'resume': {
-      if (freezing) await freezing;
-      if (closed) return {ok: false, error: 'closed'};
-      const result = await host.event({kind: 'resume'});
-      if (result.ok && !host.view().nodeLock) return {ok: false, error: 'node_unavailable'};
-      if (result.ok) { heartbeat = -1; elect(); }
-      return result;
-    }
+    case 'resume': return resume();
     case 'close': {
       if (closed) return freezing || {ok: true};
       closed = true;
@@ -240,7 +262,8 @@ async function request(message) {
 glue.listen(message => {
   if (!message || typeof message !== 'object' || Array.isArray(message) ||
       typeof message.op !== 'string') {
-    glue.send(self, {ok: false, error: 'invalid_request'});
+    // The refusal echoes the correlation id, so the caller settles at once.
+    glue.send(self, {id: message && message.id, ok: false, error: 'invalid_request'});
     return;
   }
   const lifecycle = ['freeze', 'resume', 'close', 'view'].includes(message.op);

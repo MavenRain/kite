@@ -18,7 +18,7 @@ kite/
         subst.ml unify.ml env.ml infer.ml usage.ml error.ml pp.ml
         iface.ml ir.ml lower.ml
   surface/  kite_surface: lexer.ml parser.ml ast.ml print.ml
-  runtime/  kite_runtime: cluster.ml kubelet.ml and their interfaces
+  runtime/  cluster.ml kubelet.ml and their interfaces; eval.ml artifact.ml
   bin/kite.ml  driver: check | build | iface | run | fmt | roundtrip | version
   test/  parse.exe  check.exe  iface.exe  regress.exe  cluster.exe  kubelet.exe
   dev/  gates.sh bench.sh denominators.sh denominators.json
@@ -39,27 +39,43 @@ by leader epoch.  `Kite_runtime.Kubelet` tracks local workers from spawn
 through pod-lock acquisition and shutdown, including freeze and resume.
 M1-B executes those actions in real browser Workers.  It adds an
 IndexedDB sequence log with transactional epoch fencing, a leader
-Worker and a two-tab host demonstration.  The complete browser
-acceptance run remains M1-C, described in [the M1 plan](dev/M1-PLAN.md).
+Worker and a two-tab host demonstration. M1-C adds checked source execution
+and the six-behavior browser acceptance corpus, including the hidden-tab
+timing gate, described in [the M1-C brief](dev/stage-M1-C-brief.md).
 
 After building, serve the repository with `python3 -m http.server 8000
 --bind 127.0.0.1` and open `http://127.0.0.1:8000/browser/index.html`
 in two tabs.  Apply a pod count to start the host-test Wasm payload.
-Kite source execution through the browser is a later integration step.
+The pods run the Stage 0 Wasm workload. The source acceptance runner below
+drives the same production cluster host.
 
 ## Use
 
 Build with `zsh dev/pin-dune.sh dune build @all`.  Then run
 `_build/default/bin/kite.exe check PATH.kite` to check a program or
 `_build/default/bin/kite.exe build PATH.kite` to emit its lowered `.kir`
-file.  `iface A.kite` writes `A.coi`;  `check --iface A.coi B.kite`
+file and an executable `PATH.kite.js` data artifact. `run PATH.kite`
+executes its pure expressions with the native evaluator. Browser host
+imports are handled by `KiteSource.run`, using the same evaluator compiled
+with js_of_ocaml. `iface A.kite` writes `A.coi`; `check --iface A.coi B.kite`
 checks a consumer with no need to read the provider source.  The other
-verbs are `fmt`, `roundtrip`, `version` and `run`.  Execution through
-`run` arrives at M1.
+verbs are `fmt`, `roundtrip` and `version`.
+
+To run source against real browser tabs, build and execute the acceptance
+corpus:
+
+```
+_build/default/bin/kite.exe build test/acceptance.kite
+node dev/drive.mjs
+```
+
+This includes at least 306 seconds with both cluster tabs hidden.
+`node dev/drive.mjs --quick` runs the other five behaviors for development.
+General source-to-WasmGC emission remains later work.
 
 ## Gates
 
-M1-B runs the seven M0 legs plus RUNTIME and BROWSER, in this order,
+M1-C runs the seven M0 legs plus RUNTIME, SOURCE, BROWSER and ACCEPTANCE,
 through one command,
 `zsh dev/gates.sh`:
 
@@ -79,15 +95,21 @@ through one command,
   value restriction, affine bindings and separate compilation.
 - RUNTIME:  exercises placement, epoch fencing and worker lifecycle
   traces.  Run it alone with `zsh dev/gates.sh --leg runtime`.
+- SOURCE: checks native evaluation, browser artifact execution, import
+  contracts, and explicit runtime failures.
 - BROWSER:  checks the GLUE boundary, asynchronous lifecycle races,
   actual nested Workers, Web Locks and IndexedDB transactions in
   isolated Chrome.  Run it alone with `zsh dev/gates.sh --leg browser`.
+- ACCEPTANCE: runs all six source-driven behaviors under Chrome, with
+  pod work within 3 seconds and the leader's view within 5 seconds after
+  a desired-count change in tabs hidden for more than five minutes.
 - TRUSTED-LINES:  keeps the eight elaborator files at or below 2,400
   lines.
 - DENOMINATORS:  verifies the frozen corpus and records the raw compiler
   time.
 - FLOOR:  compares the Kite pipeline, including js_of_ocaml emission
-  and browser asset assembly, per kloc with raw `ocamlopt`
+  for both browser bridges, source artifact emission and browser asset
+  assembly, per kloc with raw `ocamlopt`
   on the pinned floor corpus, using five runs on each side in one minute.
 
 The frozen kanon denominators are 1,641.599 serial and 712.803 parallel;
@@ -101,7 +123,8 @@ and fail its named semantic test.  All edits occur in disposable copies.
 
 `node dev/browser-test.mjs --hidden` adds the PR-2 probe after at least
 305 seconds hidden.  See [the M1-B brief](dev/stage-M1-B-brief.md) for
-the host boundary, timing interpretation and remaining acceptance work.
+the host boundary and PR-2 timing interpretation. The full M1-C gate is
+`node dev/drive.mjs`.
 
 ## Licence and author
 

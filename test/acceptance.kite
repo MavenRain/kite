@@ -1,0 +1,92 @@
+(* The six Stage 0 behaviors, driven and asserted by checked Kite source. *)
+import host_open : Str -> Unit cost 1 deadline 30000
+import host_close : Str -> Unit cost 1 deadline 30000
+import host_desired : { id : Str, count : Int } -> Int cost 1 deadline 30000
+import host_view : Str -> { registered : Int, running : Int, working : Int, fresh : Int, checksum : Bool, leader_epoch : Int, epoch : Int, desired : Int, placements : Int, pod_locks : Int, pending : Int } cost 1 deadline 30000
+import host_duplicate : { id : Str, index : Int } -> Bool cost 1 deadline 30000
+import host_hide : Unit -> Unit cost 1 deadline 30000
+import host_age : Unit -> Int cost 1 deadline 30000
+import host_wait : Int -> Unit cost 1 deadline 30000
+import host_now : Unit -> Int cost 1 deadline 30000
+import host_quick : Unit -> Bool cost 1 deadline 30000
+import host_assert : { condition : Bool, label : Str } -> Unit cost 1 deadline 30000
+import host_report : Str -> Unit cost 1 deadline 30000
+import host_metric : { label : Str, value : Int } -> Unit cost 1 deadline 30000
+
+let ensure = fun condition label -> host_assert { condition = condition, label = label }
+let rec await_view = fun id predicate attempts ->
+  let observed = host_view id in
+  if predicate observed then observed else
+    let _ = ensure (attempts > 0) "cluster convergence" in
+    let _ = host_wait 100 in
+    await_view id predicate (attempts - 1)
+
+let rec age_tabs = fun attempts ->
+  let age = host_age () in
+  if age >= 306000 then age else
+    let _ = ensure (attempts > 0) "continuous hidden age" in
+    let _ = host_wait 1000 in
+    age_tabs (attempts - 1)
+
+let exercise_cluster = fun _ ->
+  let _ = host_open "a" in
+  let first = await_view "a" (fun v -> v.leader_epoch > 0 && v.registered == 1) 250 in
+  let _ = host_open "b" in
+  let _ = await_view "a" (fun v -> v.registered == 2 && v.pending == 1) 250 in
+  let _ = host_open "c" in
+  let _ = await_view "a" (fun v -> v.registered == 3 && v.pending == 2) 250 in
+  let _ = await_view "b" (fun v -> v.registered == 3) 250 in
+  let _ = await_view "c" (fun v -> v.registered == 3) 250 in
+  let _ = host_report "registry" in
+  let _ = host_desired { id = "a", count = 6 } in
+  let settled = fun v -> v.running == 2 && v.working == 2 && v.checksum in
+  let _ = await_view "a" settled 250 in
+  let _ = await_view "b" settled 250 in
+  let _ = await_view "c" settled 250 in
+  let _ = await_view "a" (fun v -> v.placements == 6 && v.pod_locks == 6) 250 in
+  let _ = host_report "least-loaded-placement" in
+  let duplicate = host_duplicate { id = "b", index = 0 } in
+  let _ = ensure duplicate "duplicate pod lock refused and losing worker exited" in
+  let _ = host_report "duplicate-rejection" in
+  let _ = host_close "a" in
+  let second = await_view "b" (fun v -> v.leader_epoch > first.leader_epoch && v.registered == 2 && v.placements == 6 && v.pod_locks == 6) 250 in
+  let _ = await_view "b" (fun v -> v.working == 3 && v.running == 3 && v.checksum) 250 in
+  let _ = await_view "c" (fun v -> v.working == 3 && v.running == 3 && v.checksum) 250 in
+  let _ = host_report "leader-death-failover" in
+  let _ = host_close "b" in
+  let _ = await_view "c" (fun v -> v.leader_epoch > second.leader_epoch && v.registered == 1 && v.running == 6 && v.working == 6 && v.checksum) 250 in
+  let _ = host_report "fifo-election" in
+  host_close "c"
+
+let exercise_hidden = fun _ ->
+  let _ = host_open "h1" in
+  let _ = host_open "h2" in
+  let _ = await_view "h1" (fun v -> v.leader_epoch > 0 && v.registered == 2) 250 in
+  let _ = host_desired { id = "h1", count = 0 } in
+  let empty = fun v -> v.running == 0 && v.desired == 0 in
+  let _ = await_view "h1" empty 250 in
+  let _ = await_view "h2" empty 250 in
+  let _ = host_hide () in
+  let age = age_tabs 400 in
+  let _ = host_metric { label = "hidden_age_ms", value = age } in
+  let started = host_desired { id = "h1", count = 2 } in
+  let _ = await_view "h1" (fun v -> v.fresh > 0 && v.checksum) 30 in
+  let work_at = host_now () in
+  let work_ms = work_at - started in
+  let _ = host_metric { label = "pod_work_ms", value = work_ms } in
+  let _ = ensure (work_ms <= 3000) "hidden pod work within 3 seconds" in
+  let _ = await_view "h1" (fun v -> v.leader_epoch > 0 && v.desired == 2 && v.placements == 2 && v.pod_locks == 2) 30 in
+  let converged_at = host_now () in
+  let converge_ms = converged_at - started in
+  let _ = host_metric { label = "leader_view_ms", value = converge_ms } in
+  let _ = ensure (converge_ms <= 5000) "hidden leader view within 5 seconds" in
+  let _ = await_view "h2" (fun v -> v.fresh > 0 && v.checksum) 30 in
+  let after = host_age () in
+  let _ = ensure (after >= age) "both tabs remain continuously hidden" in
+  let _ = host_report "hidden-tab-operation" in
+  let _ = host_close "h1" in
+  host_close "h2"
+
+let result =
+  let _ = exercise_cluster () in
+  if host_quick () then () else exercise_hidden ()

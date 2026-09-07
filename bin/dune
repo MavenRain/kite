@@ -6,5 +6,5 @@
 
 (executable
  (name kite)
- (libraries kite_core kite_surface kite_elab kite_iface)
+ (libraries kite_core kite_surface kite_elab kite_iface kite_execution kite_artifact)
  (flags (:standard -warn-error +a)))

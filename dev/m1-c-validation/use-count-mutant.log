@@ -1,0 +1,7 @@
+SB-M1 edit=[let* () = Ok () in] file=lib/infer.ml
+SB-M1 build exit=0 output_bytes=4809
+CHECK-FAIL /private/var/folders/d4/9sdgktzs23s857pdkm4yfndw0000gn/T/kite-stageB-89567/mut-1/test/neg/check-affine.kite the file checks clean and the golden names Affine
+CHECK-FAIL /private/var/folders/d4/9sdgktzs23s857pdkm4yfndw0000gn/T/kite-stageB-89567/mut-1/test/neg/check-capture.kite the file checks clean and the golden names Capture
+CHECK files=20 pos=13 neg=6 ok=18 fail=2
+FAIL CHECK
+SB-M1 KILLED exit=1

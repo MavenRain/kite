@@ -20,7 +20,7 @@ function fixture() {
   const sent = [];
   const appended = [];
   const released = [];
-  const settings = {};
+  const settings = {now: 1700000100000};
   let seq = 0;
   function lease(name) {
     held.add(name);
@@ -73,7 +73,10 @@ function fixture() {
       return settings.queryFailure || {ok: true, value: [...held]};
     }
   };
-  const context = vm.createContext({setTimeout(callback) { timers.push(callback); }});
+  const context = vm.createContext({
+    Date: class extends Date { static now() { return settings.now; } },
+    setTimeout(callback) { timers.push(callback); }
+  });
   vm.runInContext(source, context);
   const host = new context.KiteNode(KiteModel, glue, {
     nodeId: 'test-node', prefix: 'test', podUrl: 'pod.js', onTick() {},
@@ -251,6 +254,108 @@ test('kill and lock-query refusals retain the occupied slot and report diagnosti
     assert.equal(f.host.workers.size, 1);
     assert.equal(f.host.error, failure === 'kill' ? 'InvalidStateError' : 'SecurityError');
   }
+});
+
+test('the five second watchdog includes workers waiting for startup or publication', async () => {
+  for (const phase of ['starting', 'publishing', 'running']) {
+    const f = fixture();
+    await f.ready();
+    const handle = await f.start();
+    let publication;
+    let gate;
+    if (phase === 'publishing') {
+      gate = deferred();
+      f.settings.append = gate;
+      publication = f.grant(handle);
+      await tick();
+    }
+    if (phase === 'running') await f.grant(handle);
+    await f.host.watchdog(f.settings.now + 4999);
+    assert.equal(handle.native.kills, 0);
+    assert.equal(f.host.view().workers.length, 1);
+    await f.host.watchdog(f.settings.now + 5000);
+    assert.equal(handle.native.kills, 1);
+    assert.equal(f.host.view().workers.length, 0);
+    if (gate) {
+      gate.resolve({ok: true, value: {epoch: 1, seq: 1}});
+      await publication;
+      assert.equal(f.began(handle.native), false);
+    }
+  }
+});
+
+test('worker ticks renew the five second watchdog deadline', async () => {
+  const f = fixture();
+  await f.ready();
+  const handle = await f.start();
+  await f.grant(handle);
+  f.settings.now += 4000;
+  await f.host.message(handle, {kind: 'tick', value: 1});
+  await f.host.watchdog(f.settings.now + 4999);
+  assert.equal(handle.native.kills, 0);
+  await f.host.watchdog(f.settings.now + 5000);
+  assert.equal(handle.native.kills, 1);
+});
+
+test('termination retries refusals while frozen and keeps the life-lock slot occupied', async () => {
+  for (const failure of ['kill', 'query']) {
+    const f = fixture();
+    await f.ready();
+    const handle = await f.start();
+    f.held.add(handle.native.lifeLock);
+    f.settings.holdLife = true;
+    if (failure === 'kill') f.settings.killFailure = true;
+    else f.settings.queryFailure = {ok: false, error: 'SecurityError'};
+    await f.host.event({kind: 'freeze'});
+    assert.equal(f.host.view().workers[0].phase, 'stopping');
+    assert.equal(f.host.workers.size, 1);
+    assert.equal(f.timers.length, 1);
+    await f.timers.shift()();
+    assert.equal(f.host.workers.size, 1);
+    assert.equal(f.timers.length, 1);
+    f.settings.killFailure = false;
+    f.settings.queryFailure = null;
+    await f.timers.shift()();
+    assert.equal(handle.native.kills, 1);
+    assert.equal(f.host.view().workers[0].phase, 'stopping');
+    f.held.delete(handle.native.lifeLock);
+    await f.timers.shift()();
+    assert.equal(handle.native.kills, 1);
+    assert.equal(f.host.view().workers.length, 0);
+    assert.equal(f.host.workers.size, 0);
+    assert.equal(f.timers.length, 0);
+  }
+});
+
+test('duplicate refusal evidence waits for successful termination and life-lock absence', async () => {
+  const f = fixture();
+  await f.ready();
+  const handle = await f.start();
+  f.held.add(handle.native.lifeLock);
+  f.settings.holdLife = true;
+  f.settings.killFailure = true;
+  await f.host.message(handle, {kind: 'pod_lock', granted: false});
+  let evidence = f.host.duplicateRefusals;
+  assert.equal(evidence.count, 1);
+  assert.equal(evidence.last.pod, handle.worker.pod);
+  assert.equal(evidence.last.ticket, handle.worker.ticket);
+  assert.equal(evidence.last.incarnation, handle.worker.incarnation);
+  assert.equal(evidence.last.exited, false);
+  await f.host.message(handle, {kind: 'pod_lock', granted: false});
+  assert.equal(evidence.count, 1);
+  f.settings.killFailure = false;
+  await f.timers.shift()();
+  assert.equal(evidence.last.exited, false);
+  f.held.delete(handle.native.lifeLock);
+  await f.timers.shift()();
+  assert.equal(evidence.last.exited, true);
+  assert.equal(f.began(handle.native), false);
+  const replacement = await f.start();
+  await f.host.message(replacement, {kind: 'pod_lock', granted: false});
+  evidence = f.host.duplicateRefusals;
+  assert.equal(evidence.count, 2);
+  assert.equal(evidence.last.ticket, replacement.worker.ticket);
+  assert.equal(evidence.last.exited, true);
 });
 
 test('node lock refusal preserves its browser diagnostic and malformed messages are values', async () => {

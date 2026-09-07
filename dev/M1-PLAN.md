@@ -1,8 +1,10 @@
 # kite M1 plan: a running cluster
 
-Status: M1-B validated;  M1-C is next.  The current user instruction to continue
-building kite authorizes this implementation work.  It is not an
-M0-EXIT ratification.  The user-only stamp in
+Status: M1-C validated on 2026-09-07. The six source-driven browser
+behaviors, hidden-tab timing gate and complete shipping-pipeline FLOOR
+passed. M2 is next. Evidence and execution limits are in
+[the M1-C brief](stage-M1-C-brief.md) and [the build log](M1-BUILD-LOG.md).
+This implementation is not an M0-EXIT ratification. The user-only stamp in
 /Users/oobi/Documents/tab-cluster-lang-m0/M0-PLAN.md:177 remains blank.
 
 ## Basis and boundary
@@ -84,3 +86,11 @@ corpus and floor protocol, and report any WasmGC-only number separately
 M1 completion requires the browser gate and the applicable pipeline
 gate evidence.  Stage changes are staged for user review.  Agents do
 not commit or push.
+
+## Next: M2
+
+Plan the four Q4 manifests, log-backed named services, node conditions
+and taints, checkpoint/drain behavior, and the twelve-fault acceptance
+battery. General source-to-WasmGC emission remains a separate backend
+obligation; M1-C uses the explicitly permitted js_of_ocaml development
+path and the required fixed Stage 0 pod workload.

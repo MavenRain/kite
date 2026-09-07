@@ -1,0 +1,44 @@
+M1 BROWSER Chrome/152.0.7977.77 revision=@529d9a34b491745086b59458f58a5aae8292adaa mode=headless full=false
+M1 source=test/acceptance.kite source_artifact=test/acceptance.kite.js
+PASS M1 registry {}
+PASS M1 least-loaded-placement {}
+M1 duplicate {"replayedSeq":33,"appendedSeq":33,"owner":"a","refusal":{"pod":0,"ticket":3,"incarnation":1,"exited":true},"refusalCount":1,"soleOwner":true,"loserWorked":false}
+PASS M1 duplicate-rejection {}
+Chrome stderr tail:
+Trying to load the allocator multiple times. This is *not* supported.
+[61677:120167896:0907/022330.792638:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022330.793113:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022330.797022:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022330.797105:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022330.797270:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022330.797328:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022330.797488:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022330.797554:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022330.797762:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022330.797818:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022330.966381:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022330.966452:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022333.260149:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022333.260206:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022333.748179:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022333.748254:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61583:120167816:0907/022333.770051:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[61677:120167896:0907/022333.860165:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022333.865292:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022334.098513:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022334.098575:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022334.338874:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022334.338960:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022334.438741:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022334.438797:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022334.506102:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022334.506165:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167896:0907/022337.964086:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61677:120167982:0907/022337.964175:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[61583:120167816:0907/022354.741753:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+
+M1-FAIL Error: Kite acceptance source failed: {"ok":false,"error":"host_failed: host_deadline:host_view"}
+    at runAcceptance (file:///Users/oobi/Documents/gpt10/kite-m1c/dev/m1-source-runner.mjs:83:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async withBrowser (file:///Users/oobi/Documents/gpt10/kite-m1c/dev/drive.mjs:399:5)
+    at async file:///Users/oobi/Documents/gpt10/kite-m1c/dev/drive.mjs:432:7

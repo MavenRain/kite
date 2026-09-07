@@ -1,0 +1,67 @@
+RUNTIME suite=eval tests=29 ok=29 fail=0
+TAP version 13
+# Subtest: compiled checked IR preserves closure capture, recursion and scoped rows
+ok 1 - compiled checked IR preserves closure capture, recursion and scoped rows
+  ---
+  duration_ms: 237.298958
+  type: 'test'
+  ...
+# Subtest: host calls receive records and resume through checked result contracts
+ok 2 - host calls receive records and resume through checked result contracts
+  ---
+  duration_ms: 10.10975
+  type: 'test'
+  ...
+# Subtest: host return contracts reject missing, extra, and mistyped fields
+ok 3 - host return contracts reject missing, extra, and mistyped fields
+  ---
+  duration_ms: 8.591917
+  type: 'test'
+  ...
+# Subtest: host variants retain scoped occurrence indices
+ok 4 - host variants retain scoped occurrence indices
+  ---
+  duration_ms: 9.224959
+  type: 'test'
+  ...
+# Subtest: strings and signed 32-bit arithmetic survive emitted JSON and browser evaluation
+ok 5 - strings and signed 32-bit arithmetic survive emitted JSON and browser evaluation
+  ---
+  duration_ms: 8.171334
+  type: 'test'
+  ...
+# Subtest: freeze expressions remain deferred during source initialization
+ok 6 - freeze expressions remain deferred during source initialization
+  ---
+  duration_ms: 9.97975
+  type: 'test'
+  ...
+# Subtest: divergent recursion cooperatively yields and malformed artifacts return values
+ok 7 - divergent recursion cooperatively yields and malformed artifacts return values
+  ---
+  duration_ms: 10.024708
+  type: 'test'
+  ...
+# Subtest: unsupported recursive values and out-of-range integers produce no artifact
+ok 8 - unsupported recursive values and out-of-range integers produce no artifact
+  ---
+  duration_ms: 13.752875
+  type: 'test'
+  ...
+# Subtest: executable structural depth agrees at 256 and refuses 257 before decoding
+ok 9 - executable structural depth agrees at 256 and refuses 257 before decoding
+  ---
+  duration_ms: 34.684792
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 403.985083
+EXECUTION-LINES evaluator=295 encoder=146 bridge=211
+PASS SOURCE

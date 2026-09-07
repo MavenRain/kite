@@ -2,3 +2,15 @@
  (name kite_runtime)
  (modules cluster kubelet)
  (flags (:standard -warn-error +a)))
+
+(library
+ (name kite_execution)
+ (modules eval)
+ (libraries kite_core)
+ (flags (:standard -warn-error +a)))
+
+(library
+ (name kite_artifact)
+ (modules artifact)
+ (libraries kite_execution kite_core kite_surface kite_elab)
+ (flags (:standard -warn-error +a)))

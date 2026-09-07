@@ -42,6 +42,15 @@ epoch comparison are new code.  See the M1-B provenance rows.
   with the leader form, and it lands inside the same audited GLUE
   module, which is the only module that may name `navigator.locks`.
 
+## Carried at M1-C
+
+The fixed Stage 0 pod workload is required by the M1 gate. Its original
+`/Users/oobi/Documents/tab-cluster-spike/web/pod.wat` compiles to 72 bytes
+with `wat2wasm`; those bytes replace the increment fixture inside
+`browser/pod.js`. Its `step(200000)` checksum is `-1734620768`.
+The source and its repository remain read only. This carry adds no
+Stage 0 page orchestration or compiler code. See PROVENANCE.md.
+
 ## Never carried
 
 - No M0 code comes from /Users/oobi/Documents/tab-cluster-spike.  Its

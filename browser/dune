@@ -4,3 +4,16 @@
  (modes byte js)
  (libraries kite_runtime js_of_ocaml)
  (flags (:standard -warn-error +a)))
+
+; The evaluator returns through a chain of direct calls.  ocamlopt makes
+; those calls tail calls.  js_of_ocaml only does that in CPS mode, so the
+; program bundle sets --effects=cps.  Without it a deep non-tail source
+; recursion exhausts the JavaScript stack and the browser host disagrees
+; with the native host on the same valid program.
+(executable
+ (name program)
+ (modules program)
+ (modes byte js)
+ (libraries kite_execution js_of_ocaml)
+ (js_of_ocaml (flags (:standard --effects=cps)))
+ (flags (:standard -warn-error +a)))

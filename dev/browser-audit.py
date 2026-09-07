@@ -5,8 +5,8 @@ import re
 import subprocess
 import sys
 
-SCRIPTS = {'glue.js', 'node-host.js', 'control.js', 'pod.js', 'page.js'}
-FILES = SCRIPTS | {'model.ml', 'dune', 'index.html'}
+SCRIPTS = {'glue.js', 'node-host.js', 'control.js', 'pod.js', 'page.js', 'source.js'}
+FILES = SCRIPTS | {'model.ml', 'program.ml', 'dune', 'index.html'}
 FORBIDDEN = {'Worker', 'navigator', 'indexedDB', 'postMessage', 'eval', 'Function'}
 IDENTIFIER = re.compile(r'[A-Za-z_$][A-Za-z0-9_$]*')
 ESCAPE = re.compile(r'\\(?:u\{([0-9a-fA-F]+)\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([\s\S]))')
@@ -155,7 +155,7 @@ def audit(root):
     if not 1 <= lines <= 300:
         errors.append(f'GLUE lines={lines}, limit=300')
     errors.extend(PageScripts().validate((browser / 'index.html').read_text()))
-    for name in sorted(SCRIPTS | {'model.ml'}):
+    for name in sorted(SCRIPTS | {'model.ml', 'program.ml'}):
         file = browser / name
         if name != 'glue.js':
             forbidden = code_tokens(file.read_text(), ocaml=name.endswith('.ml')) & FORBIDDEN

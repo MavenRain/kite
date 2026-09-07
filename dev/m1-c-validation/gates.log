@@ -1,0 +1,468 @@
+GATES kite stage=M1-C root=/Users/oobi/Documents/gpt10/kite-m1c
+KANON-DENOM serial_ms=1641.599 parallel_ms=712.803
+PASS BUILD
+HOUSE no-exception OK
+HOUSE no-wildcard-no-partial OK
+HOUSE no-mutable-state OK
+HOUSE no-bool-match-no-loop OK
+HOUSE no-option-match OK
+HOUSE no-bare-division OK
+HOUSE no-em-dash OK
+HOUSE OK
+PASS HOUSE
+PARSE files=46 ok=46 fail=0
+PASS PARSE fixtures=46
+CHECK files=20 pos=13 neg=6 ok=20 fail=0
+REGRESS tests=44 ok=44 fail=0
+PASS CHECK positives=13 twins=6
+RUNTIME suite=cluster tests=33 ok=33 fail=0
+RUNTIME suite=kubelet tests=34 ok=34 fail=0
+PASS RUNTIME
+RUNTIME suite=eval tests=29 ok=29 fail=0
+TAP version 13
+# Subtest: compiled checked IR preserves closure capture, recursion and scoped rows
+ok 1 - compiled checked IR preserves closure capture, recursion and scoped rows
+  ---
+  duration_ms: 41.553333
+  type: 'test'
+  ...
+# Subtest: host calls receive records and resume through checked result contracts
+ok 2 - host calls receive records and resume through checked result contracts
+  ---
+  duration_ms: 11.169792
+  type: 'test'
+  ...
+# Subtest: host return contracts reject missing, extra, and mistyped fields
+ok 3 - host return contracts reject missing, extra, and mistyped fields
+  ---
+  duration_ms: 8.709333
+  type: 'test'
+  ...
+# Subtest: host variants retain scoped occurrence indices
+ok 4 - host variants retain scoped occurrence indices
+  ---
+  duration_ms: 8.325042
+  type: 'test'
+  ...
+# Subtest: strings and signed 32-bit arithmetic survive emitted JSON and browser evaluation
+ok 5 - strings and signed 32-bit arithmetic survive emitted JSON and browser evaluation
+  ---
+  duration_ms: 7.512708
+  type: 'test'
+  ...
+# Subtest: freeze expressions remain deferred during source initialization
+ok 6 - freeze expressions remain deferred during source initialization
+  ---
+  duration_ms: 8.013917
+  type: 'test'
+  ...
+# Subtest: divergent recursion cooperatively yields and malformed artifacts return values
+ok 7 - divergent recursion cooperatively yields and malformed artifacts return values
+  ---
+  duration_ms: 9.051709
+  type: 'test'
+  ...
+# Subtest: unsupported recursive values and out-of-range integers produce no artifact
+ok 8 - unsupported recursive values and out-of-range integers produce no artifact
+  ---
+  duration_ms: 13.827292
+  type: 'test'
+  ...
+# Subtest: executable structural depth agrees at 256 and refuses 257 before decoding
+ok 9 - executable structural depth agrees at 256 and refuses 257 before decoding
+  ---
+  duration_ms: 35.4575
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 217.031417
+EXECUTION-LINES evaluator=295 encoder=146 bridge=211
+PASS SOURCE
+BROWSER-AUDIT OK glue_lines=235/300 scripts=6
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.004s
+
+OK
+TAP version 13
+# PASS acceptance-bridge-correlated-replies-and-source-result
+# PASS acceptance-duplicate-injection-preserves-fence-and-closes-store
+# Subtest: /Users/oobi/Documents/gpt10/kite-m1c/test/acceptance-bridge-test.mjs
+ok 1 - /Users/oobi/Documents/gpt10/kite-m1c/test/acceptance-bridge-test.mjs
+  ---
+  duration_ms: 104.386
+  type: 'test'
+  ...
+# Subtest: failed boot retries, concurrent duplicate boot opens one host, close disconnects
+ok 2 - failed boot retries, concurrent duplicate boot opens one host, close disconnects
+  ---
+  duration_ms: 73.557042
+  type: 'test'
+  ...
+# Subtest: malformed boot is refused before opening and close cancels a pending open
+ok 3 - malformed boot is refused before opening and close cancels a pending open
+  ---
+  duration_ms: 20.173208
+  type: 'test'
+  ...
+# Subtest: a claim completed after freeze cannot install leadership after resume
+ok 4 - a claim completed after freeze cannot install leadership after resume
+  ---
+  duration_ms: 90.438584
+  type: 'test'
+  ...
+# Subtest: a reconcile snapshot taken before an epoch claim retains the newly adopted leader
+ok 5 - a reconcile snapshot taken before an epoch claim retains the newly adopted leader
+  ---
+  duration_ms: 83.454917
+  type: 'test'
+  ...
+# Subtest: a later freeze cancels a resume waiting for an earlier freeze
+ok 6 - a later freeze cancels a resume waiting for an earlier freeze
+  ---
+  duration_ms: 4.016292
+  type: 'test'
+  ...
+# Subtest: a freeze invalidates a resume waiting for its node lease
+ok 7 - a freeze invalidates a resume waiting for its node lease
+  ---
+  duration_ms: 3.323792
+  type: 'test'
+  ...
+# Subtest: concurrent resumes share their pending node acquisition
+ok 8 - concurrent resumes share their pending node acquisition
+  ---
+  duration_ms: 4.459791
+  type: 'test'
+  ...
+# Subtest: freeze and close bypass unresolved reconciliation and publication
+ok 9 - freeze and close bypass unresolved reconciliation and publication
+  ---
+  duration_ms: 6.237083
+  type: 'test'
+  ...
+# Subtest: same-epoch desired changes between snapshot and append refuse the plan
+ok 10 - same-epoch desired changes between snapshot and append refuse the plan
+  ---
+  duration_ms: 3.695875
+  type: 'test'
+  ...
+# Subtest: replay does not start a pod removed by a later desired record
+ok 11 - replay does not start a pod removed by a later desired record
+  ---
+  duration_ms: 2.981875
+  type: 'test'
+  ...
+# Subtest: real Wasm starts once when begin arrives before compilation completes
+ok 12 - real Wasm starts once when begin arrives before compilation completes
+  ---
+  duration_ms: 5.042542
+  type: 'test'
+  ...
+# Subtest: pod lock refusal and Wasm startup failure release acquired leases
+ok 13 - pod lock refusal and Wasm startup failure release acquired leases
+  ---
+  duration_ms: 1.097875
+  type: 'test'
+  ...
+# Subtest: messaging and worker boundaries return browser refusals
+ok 14 - messaging and worker boundaries return browser refusals
+  ---
+  duration_ms: 8.046959
+  type: 'test'
+  ...
+# Subtest: lock delivery precedes completion and release waits for completion
+ok 15 - lock delivery precedes completion and release waits for completion
+  ---
+  duration_ms: 17.935958
+  type: 'test'
+  ...
+# Subtest: lock busy, rejected, throwing, and aborted requests are explicit
+ok 16 - lock busy, rejected, throwing, and aborted requests are explicit
+  ---
+  duration_ms: 1.529834
+  type: 'test'
+  ...
+# Subtest: open reports blocking once and closes a late connection
+ok 17 - open reports blocking once and closes a late connection
+  ---
+  duration_ms: 0.533792
+  type: 'test'
+  ...
+# Subtest: write success waits for transaction commit and fences stale epochs
+ok 18 - write success waits for transaction commit and fences stale epochs
+  ---
+  duration_ms: 6.898125
+  type: 'test'
+  ...
+# Subtest: browser write refusal aborts the transaction and counters are bounded
+ok 19 - browser write refusal aborts the transaction and counters are bounded
+  ---
+  duration_ms: 3.949625
+  type: 'test'
+  ...
+# Subtest: read waits for the entire readonly transaction to complete
+ok 20 - read waits for the entire readonly transaction to complete
+  ---
+  duration_ms: 10.170166
+  type: 'test'
+  ...
+# Subtest: optional sequence fence rejects stale plans without enqueuing writes
+ok 21 - optional sequence fence rejects stale plans without enqueuing writes
+  ---
+  duration_ms: 2.076417
+  type: 'test'
+  ...
+# Subtest: a delayed placement grant after Freeze is released without publication or Begin
+ok 22 - a delayed placement grant after Freeze is released without publication or Begin
+  ---
+  duration_ms: 14.049375
+  type: 'test'
+  ...
+# Subtest: a delayed placement grant after an epoch change cannot Begin
+ok 23 - a delayed placement grant after an epoch change cannot Begin
+  ---
+  duration_ms: 4.978541
+  type: 'test'
+  ...
+# Subtest: old placement continuations cannot stop a replacement ticket
+ok 24 - old placement continuations cannot stop a replacement ticket
+  ---
+  duration_ms: 3.152708
+  type: 'test'
+  ...
+# Subtest: append completion after freeze cannot Begin or stop a later ticket
+ok 25 - append completion after freeze cannot Begin or stop a later ticket
+  ---
+  duration_ms: 2.005459
+  type: 'test'
+  ...
+# Subtest: append completion after epoch cannot Begin or stop a later ticket
+ok 26 - append completion after epoch cannot Begin or stop a later ticket
+  ---
+  duration_ms: 1.257417
+  type: 'test'
+  ...
+# Subtest: append completion after replace cannot Begin or stop a later ticket
+ok 27 - append completion after replace cannot Begin or stop a later ticket
+  ---
+  duration_ms: 1.91875
+  type: 'test'
+  ...
+# Subtest: failed placement publication and failed Begin delivery terminate the worker
+ok 28 - failed placement publication and failed Begin delivery terminate the worker
+  ---
+  duration_ms: 1.602208
+  type: 'test'
+  ...
+# Subtest: spawn and init delivery failures leave no Starting worker
+ok 29 - spawn and init delivery failures leave no Starting worker
+  ---
+  duration_ms: 2.132458
+  type: 'test'
+  ...
+# Subtest: a killed worker retains its slot until its unique life lock disappears
+ok 30 - a killed worker retains its slot until its unique life lock disappears
+  ---
+  duration_ms: 1.54675
+  type: 'test'
+  ...
+# Subtest: kill and lock-query refusals retain the occupied slot and report diagnostics
+ok 31 - kill and lock-query refusals retain the occupied slot and report diagnostics
+  ---
+  duration_ms: 1.362666
+  type: 'test'
+  ...
+# Subtest: the five second watchdog includes workers waiting for startup or publication
+ok 32 - the five second watchdog includes workers waiting for startup or publication
+  ---
+  duration_ms: 2.489125
+  type: 'test'
+  ...
+# Subtest: worker ticks renew the five second watchdog deadline
+ok 33 - worker ticks renew the five second watchdog deadline
+  ---
+  duration_ms: 0.744625
+  type: 'test'
+  ...
+# Subtest: termination retries refusals while frozen and keeps the life-lock slot occupied
+ok 34 - termination retries refusals while frozen and keeps the life-lock slot occupied
+  ---
+  duration_ms: 1.499708
+  type: 'test'
+  ...
+# Subtest: duplicate refusal evidence waits for successful termination and life-lock absence
+ok 35 - duplicate refusal evidence waits for successful termination and life-lock absence
+  ---
+  duration_ms: 1.6065
+  type: 'test'
+  ...
+# Subtest: node lock refusal preserves its browser diagnostic and malformed messages are values
+ok 36 - node lock refusal preserves its browser diagnostic and malformed messages are values
+  ---
+  duration_ms: 0.612084
+  type: 'test'
+  ...
+# Subtest: failed Resume acquisition is explicit and can retry from Frozen
+ok 37 - failed Resume acquisition is explicit and can retry from Frozen
+  ---
+  duration_ms: 0.851375
+  type: 'test'
+  ...
+# Subtest: a delayed old node acquisition cannot change the current generation
+ok 38 - a delayed old node acquisition cannot change the current generation
+  ---
+  duration_ms: 2.125041
+  type: 'test'
+  ...
+# Subtest: cooperative yield permits timers before resuming source
+ok 39 - cooperative yield permits timers before resuming source
+  ---
+  duration_ms: 10.162917
+  type: 'test'
+  ...
+# Subtest: host failure is an explicit reply and suppresses later source work
+ok 40 - host failure is an explicit reply and suppresses later source work
+  ---
+  duration_ms: 3.663583
+  type: 'test'
+  ...
+# Subtest: deadline resumes once and ignores a late host reply
+ok 41 - deadline resumes once and ignores a late host reply
+  ---
+  duration_ms: 32.424333
+  type: 'test'
+  ...
+# Subtest: elapsed deadline rejects a synchronous host result before its timer can fire
+ok 42 - elapsed deadline rejects a synchronous host result before its timer can fire
+  ---
+  duration_ms: 1.32875
+  type: 'test'
+  ...
+# Subtest: host decoding errors return an explicit failure
+ok 43 - host decoding errors return an explicit failure
+  ---
+  duration_ms: 3.379708
+  type: 'test'
+  ...
+1..43
+# tests 43
+# suites 0
+# pass 43
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 429.146667
+BROWSER Chrome/152.0.7977.77 revision=@529d9a34b491745086b59458f58a5aae8292adaa mode=headless
+PASS native-model-bridge-lifecycle-planner-and-invalid-inputs
+PASS real-lock-contention-cancellation-and-generation-local-release
+PASS idb-concurrent-cas-append-rollback-and-reopen
+PR-2 mode=foreground hidden_age_ms=0 root_spawn_ms=43 nested_spawn_ms=23 first_work_ms=59 timer_interval_ms=40 observed_cadence_ms=59,24,40,42,36,39 spawn_within_3s=true
+PASS nested-worker-pod-lock-begin-and-busy-refusal
+PR-4 transaction_started_before_termination=true marker=append-returned writes_queued_before_termination=unobserved attempts=1 interrupted=1 committed=0 connection_close_drained=true atomic_prefix=true lock_handoff=true recovery_epoch=2 stale_append=refused
+PASS idb-close-pending-transaction-and-writer-termination-recovery
+PR-4 mode=tab-close close=Target.closeTarget independent_observer=true transaction_started_before_close=true marker=append-returned writes_queued_before_close=unobserved attempts=1 interrupted=1 committed=0 lock_handoff=true claim_before_observer_read=true atomic_prefix=true recovery_epoch=2 stale_append=refused
+PASS idb-writer-tab-close-lock-handoff-and-fenced-recovery
+PASS production-two-tab-desired-placement-and-work
+PASS production-leader-freeze-pod-replacement-and-epoch-takeover
+PASS production-resume-fresh-incarnation
+BROWSER-OK
+PASS BROWSER
+BUILD-OK file=/Users/oobi/Documents/gpt10/kite-m1c/test/acceptance.kite ir=/Users/oobi/Documents/gpt10/kite-m1c/test/acceptance.kir bytes=5404 artifact=/Users/oobi/Documents/gpt10/kite-m1c/test/acceptance.kite.js
+M1 BROWSER Chrome/152.0.7977.77 revision=@529d9a34b491745086b59458f58a5aae8292adaa mode=headless full=true
+M1 source=test/acceptance.kite source_artifact=test/acceptance.kite.js
+M1 operation host_open argument="a"
+M1 operation host_open argument="b"
+M1 operation host_open argument="c"
+PASS M1 registry {}
+M1 operation-result {"name":"host_desired","argument":{"id":"a","count":6},"startedAt":1788773360295,"elapsedMs":2740,"ok":true}
+PASS M1 least-loaded-placement {}
+M1 duplicate {"replayedSeq":52,"appendedSeq":50,"owner":"a","refusal":{"pod":0,"ticket":3,"incarnation":1,"exited":true},"refusalCount":1,"soleOwner":true,"loserWorked":false}
+M1 operation-result {"name":"host_duplicate","argument":{"id":"b","index":0},"startedAt":1788773366716,"elapsedMs":3565,"ok":true}
+PASS M1 duplicate-rejection {}
+M1 operation host_close argument="a"
+M1 operation-result {"name":"host_view","argument":"b","startedAt":1788773372992,"elapsedMs":4814,"ok":true}
+M1 progress elapsed_ms=47201 nodes=b,c passed=3/6
+M1 pending {"name":"host_view","argument":"b","startedAt":1788773377960,"elapsedMs":16805,"cdp":[{"method":"Runtime.evaluate","session":"885FD4998CA068C281C6388D98915B32","elapsedMs":16805}]}
+M1 operation-result {"name":"host_view","argument":"b","startedAt":1788773377960,"elapsedMs":23009,"ok":true}
+M1 operation-result {"name":"host_view","argument":"c","startedAt":1788773402684,"elapsedMs":3225,"ok":true}
+PASS M1 leader-death-failover {}
+M1 operation host_close argument="b"
+PASS M1 fifo-election {}
+M1 operation host_close argument="c"
+M1 operation host_open argument="h1"
+M1 operation host_open argument="h2"
+M1 operation host_hide argument=null
+M1 hidden_age_ms=19 nodes=h1,h2
+M1 progress elapsed_ms=92203 nodes=h1,h2 passed=5/6
+M1 pending {"name":"host_wait","argument":1000,"startedAt":1788773439231,"elapsedMs":536,"cdp":[]}
+M1 hidden_age_ms=30270 nodes=h1,h2
+M1 hidden_age_ms=60803 nodes=h1,h2
+M1 progress elapsed_ms=137204 nodes=h1,h2 passed=5/6
+M1 pending {"name":"host_wait","argument":1000,"startedAt":1788773484560,"elapsedMs":209,"cdp":[]}
+M1 hidden_age_ms=90830 nodes=h1,h2
+M1 progress elapsed_ms=182206 nodes=h1,h2 passed=5/6
+M1 pending {"name":"host_wait","argument":1000,"startedAt":1788773529008,"elapsedMs":763,"cdp":[]}
+M1 hidden_age_ms=121730 nodes=h1,h2
+M1 hidden_age_ms=152743 nodes=h1,h2
+M1 progress elapsed_ms=227208 nodes=h1,h2 passed=5/6
+M1 pending {"name":"host_wait","argument":1000,"startedAt":1788773574315,"elapsedMs":458,"cdp":[]}
+M1 operation-result {"name":"host_age","argument":null,"startedAt":1788773576419,"elapsedMs":4778,"ok":true}
+M1 operation-result {"name":"host_age","argument":null,"startedAt":1788773583322,"elapsedMs":2643,"ok":true}
+M1 hidden_age_ms=183361 nodes=h1,h2
+M1 progress elapsed_ms=272210 nodes=h1,h2 passed=5/6
+M1 pending {"name":"host_wait","argument":1000,"startedAt":1788773619161,"elapsedMs":613,"cdp":[]}
+M1 hidden_age_ms=214348 nodes=h1,h2
+M1 hidden_age_ms=244562 nodes=h1,h2
+M1 progress elapsed_ms=317215 nodes=h1,h2 passed=5/6
+M1 pending {"name":"host_age","argument":null,"startedAt":1788773661984,"elapsedMs":2798,"cdp":[{"method":"Runtime.evaluate","session":"5F4F69F19E9302DCC7EAE5948580CAFF","elapsedMs":2798},{"method":"Runtime.evaluate","session":"8F5949E47D4A09D4F0F193F213362E98","elapsedMs":2798}]}
+M1 operation-result {"name":"host_age","argument":null,"startedAt":1788773661984,"elapsedMs":4940,"ok":true}
+M1 hidden_age_ms=274740 nodes=h1,h2
+M1 progress elapsed_ms=362217 nodes=h1,h2 passed=5/6
+M1 pending {"name":"host_wait","argument":1000,"startedAt":1788773708826,"elapsedMs":955,"cdp":[]}
+M1 hidden_age_ms=305181 nodes=h1,h2
+M1 hidden_age_ms=306227
+M1 pod_work_ms=754
+M1 leader_view_ms=874
+PASS M1 hidden-tab-operation {"hidden_age_ms":306227,"pod_work_ms":754,"leader_view_ms":874,"hiddenAgeMs":[309848,306253],"workMs":530,"leaderViewMs":862}
+M1 operation host_close argument="h1"
+M1 operation host_close argument="h2"
+SOURCE-ACCEPTANCE OK file=test/acceptance.kite
+M1-OK behaviors=6 hidden-threshold-ms=306000 pod-work-limit-ms=3000 leader-view-limit-ms=5000
+PASS ACCEPTANCE
+TRUSTED-LINES elaborator=2374/2400 OK
+PASS TRUSTED-LINES
+denominators.json: OK
+DENOM raw_ms_per_kloc=491.365 median_ms=2445.034 lines=4976 files=19 sha=71878111d71951341a0f16a3fd971f1d108c3f80cbcb4102ba9d02c76a730543
+NUMSHA sha=036cf35467ad2c3775fabc70c6e44891ce6ee1ee585b5bd8ecf49bde759ff3f9 lines=1055 files=1
+PASS DENOMINATORS raw_ms_per_kloc=491.365
+m0-spine.kite: OK
+floor-corpus.txt: OK
+FLOOR pipeline_ms_per_kloc=576.422 floor_ms_per_kloc=685.407 num_sha=036cf35467ad2c3775fabc70c6e44891ce6ee1ee585b5bd8ecf49bde759ff3f9 flo_sha=d5334cf0b4d1b1a1db5336857c880b40d74aa639449365bfbbd0b81bb345722c num_kloc=1.055 flo_kloc=0.572 host=Onyekachukwus-MacBook-Pro-2.local arch=arm64 load_before=44.01 load_after=42.25 minute_before=2026-09-07T09:35 minute_after=2026-09-07T09:35
+DENOM-FROZEN kanon_serial=1641.599 kanon_parallel=712.803
+PIPELINE includes=check,lower,source-artifact,js_of_ocaml-control,js_of_ocaml-evaluator,browser-assets
+WASMGC-ONLY not measured, M1 retains the fixed Stage 0 Wasm workload
+GATE-OK
+PASS FLOOR
+
+MEASURE BUILD tier=MED elapsed_ms=742.412 exit=0
+MEASURE HOUSE tier=FAST elapsed_ms=146.653 exit=0
+MEASURE PARSE tier=MED elapsed_ms=490.546 exit=0
+MEASURE CHECK tier=MED elapsed_ms=726.973 exit=0
+MEASURE RUNTIME tier=MED elapsed_ms=681.362 exit=0
+MEASURE SOURCE tier=MED elapsed_ms=649.437 exit=0
+MEASURE BROWSER tier=SLOW elapsed_ms=13715.563 exit=0
+MEASURE ACCEPTANCE tier=M1 elapsed_ms=375300.827 exit=0
+MEASURE TRUSTED-LINES tier=FAST elapsed_ms=86.526 exit=0
+MEASURE DENOMINATORS tier=SLOW elapsed_ms=16275.922 exit=0
+MEASURE FLOOR tier=SUITE elapsed_ms=6738.193 exit=0
+
+GATES-OK
