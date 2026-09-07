@@ -37,9 +37,15 @@ M1-A adds the native cluster control model.  `Kite_runtime.Cluster`
 plans placements from lock and heartbeat observations and fences plans
 by leader epoch.  `Kite_runtime.Kubelet` tracks local workers from spawn
 through pod-lock acquisition and shutdown, including freeze and resume.
-The browser host will execute its returned actions.  Browser execution,
-IndexedDB transactions and the hidden-tab acceptance run remain in
-M1-B and M1-C, described in [the M1 plan](dev/M1-PLAN.md).
+M1-B executes those actions in real browser Workers.  It adds an
+IndexedDB sequence log with transactional epoch fencing, a leader
+Worker and a two-tab host demonstration.  The complete browser
+acceptance run remains M1-C, described in [the M1 plan](dev/M1-PLAN.md).
+
+After building, serve the repository with `python3 -m http.server 8000
+--bind 127.0.0.1` and open `http://127.0.0.1:8000/browser/index.html`
+in two tabs.  Apply a pod count to start the host-test Wasm payload.
+Kite source execution through the browser is a later integration step.
 
 ## Use
 
@@ -53,7 +59,7 @@ verbs are `fmt`, `roundtrip`, `version` and `run`.  Execution through
 
 ## Gates
 
-M1-A runs the seven M0 legs and the new RUNTIME leg, in this order,
+M1-B runs the seven M0 legs plus RUNTIME and BROWSER, in this order,
 through one command,
 `zsh dev/gates.sh`:
 
@@ -73,11 +79,15 @@ through one command,
   value restriction, affine bindings and separate compilation.
 - RUNTIME:  exercises placement, epoch fencing and worker lifecycle
   traces.  Run it alone with `zsh dev/gates.sh --leg runtime`.
+- BROWSER:  checks the GLUE boundary, asynchronous lifecycle races,
+  actual nested Workers, Web Locks and IndexedDB transactions in
+  isolated Chrome.  Run it alone with `zsh dev/gates.sh --leg browser`.
 - TRUSTED-LINES:  keeps the eight elaborator files at or below 2,400
   lines.
 - DENOMINATORS:  verifies the frozen corpus and records the raw compiler
   time.
-- FLOOR:  compares the full Kite pipeline per kloc with raw `ocamlopt`
+- FLOOR:  compares the Kite pipeline, including js_of_ocaml emission
+  and browser asset assembly, per kloc with raw `ocamlopt`
   on the pinned floor corpus, using five runs on each side in one minute.
 
 The frozen kanon denominators are 1,641.599 serial and 712.803 parallel;
@@ -88,6 +98,10 @@ the `ctxcat-ocaml` opam switch, and through no other switch.
 `python3 dev/runtime-mutations.py` verifies the native runtime tests
 against six deliberately broken safety rules.  Each mutant must build
 and fail its named semantic test.  All edits occur in disposable copies.
+
+`node dev/browser-test.mjs --hidden` adds the PR-2 probe after at least
+305 seconds hidden.  See [the M1-B brief](dev/stage-M1-B-brief.md) for
+the host boundary, timing interpretation and remaining acceptance work.
 
 ## Licence and author
 

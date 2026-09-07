@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kite cluster</title>
+<style>
+  body { font: 16px system-ui; max-width: 60rem; margin: 3rem auto; padding: 0 1rem; }
+  button, input { font: inherit; padding: .4rem; }
+  pre { background: #f3f5f7; padding: 1rem; overflow: auto; }
+</style>
+<h1>Kite cluster</h1>
+<p>Open this page in a second tab to join the same local cluster.</p>
+<label>Pods <input id="desired" type="number" min="0" max="64" value="2"></label>
+<button id="apply">Apply</button>
+<button id="freeze">Freeze node</button>
+<button id="resume">Resume node</button>
+<p id="status">Starting node...</p>
+<pre id="view"></pre>
+<script src="glue.js"></script>
+<script src="page.js"></script>
+</html>

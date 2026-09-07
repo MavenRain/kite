@@ -2,7 +2,7 @@
 # dev/pin-dune.sh [-C DIR] CMD [ARGS...]
 # Runs CMD with the ctxcat-ocaml opam switch first on PATH, so every dune,
 # ocamlfind, ocamldep and ocamlopt call of every stage reads OCaml 5.3.0,
-# dune 3.24.0 and no third-party package.  Examples:
+# dune 3.24.0 and the same package library paths.  Examples:
 #   zsh /Users/oobi/Documents/kite/dev/pin-dune.sh dune build @all
 #   zsh /Users/oobi/Documents/kite/dev/pin-dune.sh -C /tmp/copy ocamlfind ocamlopt -c a.ml
 #
@@ -12,8 +12,8 @@
 # repository root, which it takes from its own path.
 #
 # ADAPTED from /Users/oobi/Documents/brisk/dev/pin-dune.sh (44 lines).
-# The chpwd guard, the -C option and the free command are unchanged.  One
-# line changes:  the exported PATH names the ctxcat-ocaml switch.
+# The chpwd guard, the -C option and the free command are unchanged.
+# PATH and the opam library variables name the ctxcat-ocaml switch.
 
 set -u
 
@@ -40,5 +40,9 @@ fi
 [[ $# -ge 1 ]] || usage
 
 export PATH=/Users/oobi/.opam/ctxcat-ocaml/bin:$PATH
+export OPAM_SWITCH_PREFIX=/Users/oobi/.opam/ctxcat-ocaml
+export OCAMLPATH=/Users/oobi/.opam/ctxcat-ocaml/lib
+export CAML_LD_LIBRARY_PATH=/Users/oobi/.opam/ctxcat-ocaml/lib/stublibs
+export OCAML_TOPLEVEL_PATH=/Users/oobi/.opam/ctxcat-ocaml/lib/toplevel
 cd $workdir || exit 3
 exec "$@"

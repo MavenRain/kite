@@ -1,6 +1,6 @@
 # kite M1 plan: a running cluster
 
-Status: M1-A implementation.  The current user instruction to continue
+Status: M1-B validated;  M1-C is next.  The current user instruction to continue
 building kite authorizes this implementation work.  It is not an
 M0-EXIT ratification.  The user-only stamp in
 /Users/oobi/Documents/tab-cluster-lang-m0/M0-PLAN.md:177 remains blank.
@@ -42,6 +42,12 @@ milestone refusals remain in force.  See dev/stage-M1-A-brief.md for the
 deliverables and gate commands.
 
 ## M1-B: browser host and durable fencing
+
+The implementation and acceptance commands are in
+[the M1-B brief](stage-M1-B-brief.md).  The browser host consumes the
+M1-A OCaml models through js_of_ocaml and runs an original Wasm test
+payload.  Stage C retains the complete milestone acceptance corpus and
+the source-language browser execution path.
 
 Implement the host GLUE and IndexedDB sequence log.  The per-tab control
 Worker constructs each nested pod Worker and owns its handle.  The

@@ -1,0 +1,6 @@
+(executable
+ (name model)
+ (modules model)
+ (modes byte js)
+ (libraries kite_runtime js_of_ocaml)
+ (flags (:standard -warn-error +a)))

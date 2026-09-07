@@ -18,11 +18,18 @@ sibling tree named here is read only (M0-PLAN.md:151).
 - The denominator pin, /Users/oobi/Documents/affine-lang-tot-pin at
   6d0d48d, read and never built in place.
 
-## NOT carried at M0:  the M1 carries
+## Carried at M1-B
 
 These two shells are an M1 carry and not an M0 carry
 (/Users/oobi/Documents/tab-cluster-lang-dossier-host.md:122-126).  No M0
 file names them, and no browser code exists at M0 (M0-PLAN.md:7).
+
+M1-B adapts their callback discipline into `browser/glue.js`.  It uses
+the browser APIs directly through one bounded JS module.  The Tea and
+Ojs dependencies are not copied.  IndexedDB append and claim wait for
+transaction completion, and lock release waits for the request to
+settle.  Each lease owns its own release closure.  The sequence log and
+epoch comparison are new code.  See the M1-B provenance rows.
 
 - `Idb`, the IndexedDB shell of
   /Users/oobi/Documents/ocaml-tea/lib/tea_client_run/idb.ml (149 lines)

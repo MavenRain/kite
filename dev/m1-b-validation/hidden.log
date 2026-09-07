@@ -1,0 +1,20 @@
+BROWSER Chrome/152.0.7977.77 revision=@529d9a34b491745086b59458f58a5aae8292adaa mode=headless
+PASS native-model-bridge-lifecycle-planner-and-invalid-inputs
+PASS real-lock-contention-cancellation-and-generation-local-release
+PASS idb-concurrent-cas-append-rollback-and-reopen
+PR-2 mode=foreground hidden_age_ms=0 root_spawn_ms=55 nested_spawn_ms=61 first_work_ms=43 timer_interval_ms=40 observed_cadence_ms=43,38,44,40,36,45 spawn_within_3s=true
+PASS nested-worker-pod-lock-begin-and-busy-refusal
+PR-4 transaction_started_before_termination=true marker=append-returned writes_queued_before_termination=unobserved attempts=1 interrupted=1 committed=0 connection_close_drained=true atomic_prefix=true recovery_epoch=2 stale_append=refused
+PASS idb-close-pending-transaction-and-writer-termination-recovery
+PASS production-two-tab-desired-placement-and-work
+PASS production-leader-freeze-pod-replacement-and-epoch-takeover
+PASS production-resume-fresh-incarnation
+PR-2 background page verified hidden, waiting 306 seconds without throttling overrides
+PR-2 hidden_age_ms=60941
+PR-2 hidden_age_ms=121754
+PR-2 hidden_age_ms=182285
+PR-2 hidden_age_ms=242681
+PR-2 hidden_age_ms=303005
+PR-2 mode=hidden hidden_age_ms=308092 root_spawn_ms=593 nested_spawn_ms=50 first_work_ms=47 timer_interval_ms=40 observed_cadence_ms=42,39,41,40,40,40 spawn_within_3s=true
+PASS hidden-nested-worker-lock-begin-and-cadence
+BROWSER-OK

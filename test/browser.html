@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>kite browser probes</title>
+  <script>
+    globalThis.kiteBrowserErrors = [];
+    addEventListener("error", event => kiteBrowserErrors.push(event.message || "resource error"));
+    addEventListener("unhandledrejection", event => kiteBrowserErrors.push(String(event.reason)));
+  </script>
+  <script defer src="/browser/glue.js"></script>
+  <script defer src="/_build/default/browser/model.bc.js"></script>
+  <script defer src="/test/browser-probe.js"></script>
+</head>
+<body><pre id="results">Waiting for the browser runner.</pre></body>
+</html>

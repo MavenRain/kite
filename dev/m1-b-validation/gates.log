@@ -1,0 +1,251 @@
+GATES kite stage=M1-B root=/Users/oobi/Documents/gpt10/kite-m1b
+KANON-DENOM serial_ms=1641.599 parallel_ms=712.803
+PASS BUILD
+HOUSE no-exception OK
+HOUSE no-wildcard-no-partial OK
+HOUSE no-mutable-state OK
+HOUSE no-bool-match-no-loop OK
+HOUSE no-option-match OK
+HOUSE no-bare-division OK
+HOUSE no-em-dash OK
+HOUSE OK
+PASS HOUSE
+PARSE files=46 ok=46 fail=0
+PASS PARSE fixtures=46
+CHECK files=20 pos=13 neg=6 ok=20 fail=0
+REGRESS tests=44 ok=44 fail=0
+PASS CHECK positives=13 twins=6
+RUNTIME suite=cluster tests=33 ok=33 fail=0
+RUNTIME suite=kubelet tests=34 ok=34 fail=0
+PASS RUNTIME
+BROWSER-AUDIT OK glue_lines=235/300 scripts=5
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.003s
+
+OK
+TAP version 13
+# Subtest: failed boot retries, concurrent duplicate boot opens one host, close disconnects
+ok 1 - failed boot retries, concurrent duplicate boot opens one host, close disconnects
+  ---
+  duration_ms: 25.440667
+  type: 'test'
+  ...
+# Subtest: malformed boot is refused before opening and close cancels a pending open
+ok 2 - malformed boot is refused before opening and close cancels a pending open
+  ---
+  duration_ms: 2.392667
+  type: 'test'
+  ...
+# Subtest: a claim completed after freeze cannot install leadership after resume
+ok 3 - a claim completed after freeze cannot install leadership after resume
+  ---
+  duration_ms: 3.9995
+  type: 'test'
+  ...
+# Subtest: freeze and close bypass unresolved reconciliation and publication
+ok 4 - freeze and close bypass unresolved reconciliation and publication
+  ---
+  duration_ms: 5.3265
+  type: 'test'
+  ...
+# Subtest: same-epoch desired changes between snapshot and append refuse the plan
+ok 5 - same-epoch desired changes between snapshot and append refuse the plan
+  ---
+  duration_ms: 3.444834
+  type: 'test'
+  ...
+# Subtest: replay does not start a pod removed by a later desired record
+ok 6 - replay does not start a pod removed by a later desired record
+  ---
+  duration_ms: 2.072083
+  type: 'test'
+  ...
+# Subtest: real Wasm starts once when begin arrives before compilation completes
+ok 7 - real Wasm starts once when begin arrives before compilation completes
+  ---
+  duration_ms: 1.14325
+  type: 'test'
+  ...
+# Subtest: pod lock refusal and Wasm startup failure release acquired leases
+ok 8 - pod lock refusal and Wasm startup failure release acquired leases
+  ---
+  duration_ms: 1.000417
+  type: 'test'
+  ...
+# Subtest: messaging and worker boundaries return browser refusals
+ok 9 - messaging and worker boundaries return browser refusals
+  ---
+  duration_ms: 2.755709
+  type: 'test'
+  ...
+# Subtest: lock delivery precedes completion and release waits for completion
+ok 10 - lock delivery precedes completion and release waits for completion
+  ---
+  duration_ms: 5.270583
+  type: 'test'
+  ...
+# Subtest: lock busy, rejected, throwing, and aborted requests are explicit
+ok 11 - lock busy, rejected, throwing, and aborted requests are explicit
+  ---
+  duration_ms: 1.450291
+  type: 'test'
+  ...
+# Subtest: open reports blocking once and closes a late connection
+ok 12 - open reports blocking once and closes a late connection
+  ---
+  duration_ms: 0.469708
+  type: 'test'
+  ...
+# Subtest: write success waits for transaction commit and fences stale epochs
+ok 13 - write success waits for transaction commit and fences stale epochs
+  ---
+  duration_ms: 2.035958
+  type: 'test'
+  ...
+# Subtest: browser write refusal aborts the transaction and counters are bounded
+ok 14 - browser write refusal aborts the transaction and counters are bounded
+  ---
+  duration_ms: 0.669708
+  type: 'test'
+  ...
+# Subtest: read waits for the entire readonly transaction to complete
+ok 15 - read waits for the entire readonly transaction to complete
+  ---
+  duration_ms: 0.896875
+  type: 'test'
+  ...
+# Subtest: optional sequence fence rejects stale plans without enqueuing writes
+ok 16 - optional sequence fence rejects stale plans without enqueuing writes
+  ---
+  duration_ms: 0.595542
+  type: 'test'
+  ...
+# Subtest: a delayed placement grant after Freeze is released without publication or Begin
+ok 17 - a delayed placement grant after Freeze is released without publication or Begin
+  ---
+  duration_ms: 4.973291
+  type: 'test'
+  ...
+# Subtest: a delayed placement grant after an epoch change cannot Begin
+ok 18 - a delayed placement grant after an epoch change cannot Begin
+  ---
+  duration_ms: 1.107875
+  type: 'test'
+  ...
+# Subtest: old placement continuations cannot stop a replacement ticket
+ok 19 - old placement continuations cannot stop a replacement ticket
+  ---
+  duration_ms: 0.924375
+  type: 'test'
+  ...
+# Subtest: append completion after freeze cannot Begin or stop a later ticket
+ok 20 - append completion after freeze cannot Begin or stop a later ticket
+  ---
+  duration_ms: 0.996166
+  type: 'test'
+  ...
+# Subtest: append completion after epoch cannot Begin or stop a later ticket
+ok 21 - append completion after epoch cannot Begin or stop a later ticket
+  ---
+  duration_ms: 0.893125
+  type: 'test'
+  ...
+# Subtest: append completion after replace cannot Begin or stop a later ticket
+ok 22 - append completion after replace cannot Begin or stop a later ticket
+  ---
+  duration_ms: 1.131834
+  type: 'test'
+  ...
+# Subtest: failed placement publication and failed Begin delivery terminate the worker
+ok 23 - failed placement publication and failed Begin delivery terminate the worker
+  ---
+  duration_ms: 1.936875
+  type: 'test'
+  ...
+# Subtest: spawn and init delivery failures leave no Starting worker
+ok 24 - spawn and init delivery failures leave no Starting worker
+  ---
+  duration_ms: 1.085625
+  type: 'test'
+  ...
+# Subtest: a killed worker retains its slot until its unique life lock disappears
+ok 25 - a killed worker retains its slot until its unique life lock disappears
+  ---
+  duration_ms: 1.8215
+  type: 'test'
+  ...
+# Subtest: kill and lock-query refusals retain the occupied slot and report diagnostics
+ok 26 - kill and lock-query refusals retain the occupied slot and report diagnostics
+  ---
+  duration_ms: 1.137375
+  type: 'test'
+  ...
+# Subtest: node lock refusal preserves its browser diagnostic and malformed messages are values
+ok 27 - node lock refusal preserves its browser diagnostic and malformed messages are values
+  ---
+  duration_ms: 0.468208
+  type: 'test'
+  ...
+# Subtest: failed Resume acquisition is explicit and can retry from Frozen
+ok 28 - failed Resume acquisition is explicit and can retry from Frozen
+  ---
+  duration_ms: 0.994875
+  type: 'test'
+  ...
+# Subtest: a delayed old node acquisition cannot change the current generation
+ok 29 - a delayed old node acquisition cannot change the current generation
+  ---
+  duration_ms: 1.951584
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 107.8605
+BROWSER Chrome/152.0.7977.77 revision=@529d9a34b491745086b59458f58a5aae8292adaa mode=headless
+PASS native-model-bridge-lifecycle-planner-and-invalid-inputs
+PASS real-lock-contention-cancellation-and-generation-local-release
+PASS idb-concurrent-cas-append-rollback-and-reopen
+PR-2 mode=foreground hidden_age_ms=0 root_spawn_ms=8 nested_spawn_ms=7 first_work_ms=45 timer_interval_ms=40 observed_cadence_ms=44,37,43,40,41,38 spawn_within_3s=true
+PASS nested-worker-pod-lock-begin-and-busy-refusal
+PR-4 transaction_started_before_termination=true marker=append-returned writes_queued_before_termination=unobserved attempts=1 interrupted=1 committed=0 connection_close_drained=true atomic_prefix=true lock_handoff=true recovery_epoch=2 stale_append=refused
+PASS idb-close-pending-transaction-and-writer-termination-recovery
+PR-4 mode=tab-close close=Target.closeTarget independent_observer=true transaction_started_before_close=true marker=append-returned writes_queued_before_close=unobserved attempts=1 interrupted=1 committed=0 lock_handoff=true claim_before_observer_read=true atomic_prefix=true recovery_epoch=2 stale_append=refused
+PASS idb-writer-tab-close-lock-handoff-and-fenced-recovery
+PASS production-two-tab-desired-placement-and-work
+PASS production-leader-freeze-pod-replacement-and-epoch-takeover
+PASS production-resume-fresh-incarnation
+BROWSER-OK
+PASS BROWSER
+TRUSTED-LINES elaborator=2374/2400 OK
+PASS TRUSTED-LINES
+denominators.json: OK
+DENOM raw_ms_per_kloc=205.078 median_ms=1020.467 lines=4976 files=19 sha=71878111d71951341a0f16a3fd971f1d108c3f80cbcb4102ba9d02c76a730543
+NUMSHA sha=036cf35467ad2c3775fabc70c6e44891ce6ee1ee585b5bd8ecf49bde759ff3f9 lines=1055 files=1
+PASS DENOMINATORS raw_ms_per_kloc=205.078
+m0-spine.kite: OK
+floor-corpus.txt: OK
+FLOOR pipeline_ms_per_kloc=239.092 floor_ms_per_kloc=446.582 num_sha=036cf35467ad2c3775fabc70c6e44891ce6ee1ee585b5bd8ecf49bde759ff3f9 flo_sha=d5334cf0b4d1b1a1db5336857c880b40d74aa639449365bfbbd0b81bb345722c num_kloc=1.055 flo_kloc=0.572 host=Onyekachukwus-MacBook-Pro-2.local arch=arm64 load_before=13.49 load_after=13.49 minute_before=2026-09-07T06:21 minute_after=2026-09-07T06:21
+DENOM-FROZEN kanon_serial=1641.599 kanon_parallel=712.803
+PIPELINE includes=check,lower,js_of_ocaml,browser-assets
+WASMGC-ONLY not measured, browser pods use a host-test Wasm fixture
+GATE-OK
+PASS FLOOR
+
+MEASURE BUILD tier=MED elapsed_ms=194.423 exit=0
+MEASURE HOUSE tier=FAST elapsed_ms=124.760 exit=0
+MEASURE PARSE tier=MED elapsed_ms=382.679 exit=0
+MEASURE CHECK tier=MED elapsed_ms=715.359 exit=0
+MEASURE RUNTIME tier=MED elapsed_ms=706.060 exit=0
+MEASURE BROWSER tier=SLOW elapsed_ms=7339.543 exit=0
+MEASURE TRUSTED-LINES tier=FAST elapsed_ms=49.342 exit=0
+MEASURE DENOMINATORS tier=SLOW elapsed_ms=7600.014 exit=0
+MEASURE FLOOR tier=SUITE elapsed_ms=3433.728 exit=0
+
+GATES-OK
