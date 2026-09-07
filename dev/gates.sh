@@ -13,6 +13,7 @@
 # M1-A adds RUNTIME for the planner and local Worker lifecycle models.
 # M1-B adds BROWSER and js_of_ocaml emission to each FLOOR sample.
 # M1-C adds source execution and full hidden-tab acceptance.
+# M2-A adds DURABLE for the native recovery and admission models.
 #
 # Each leg prints one PASS or FAIL line.  A FAIL adds the leg's captured
 # output under its line.  Every leg runs even when an earlier one failed,
@@ -367,6 +368,40 @@ leg_runtime () {
   return 0
 }
 
+# Exact per-suite counts prevent a removed recovery suite from passing.
+leg_durable () {
+  local out code suite line want
+  local targets=(feed_test service_test volume_test taint_test manifest_test)
+  local paths=()
+  for suite in $targets; do paths+=(test/$suite.exe); done
+  out=$(zsh $ROOT/dev/pin-dune.sh dune build $paths 2>&1)
+  code=$?
+  if [[ $code -ne 0 || -n $out ]]; then
+    print -r -- "build exit=$code out=[$out]"
+    print -r -- "FAIL DURABLE"
+    return 1
+  fi
+  for suite in feed service volume taint manifest; do
+    case $suite in
+      feed) want=22 ;;
+      service) want=23 ;;
+      volume) want=33 ;;
+      taint) want=25 ;;
+      manifest) want=20 ;;
+    esac
+    out=$($ROOT/_build/default/test/${suite}_test.exe 2>&1)
+    code=$?
+    print -r -- "$out"
+    line="RUNTIME suite=$suite tests=$want ok=$want fail=0"
+    if [[ $code -ne 0 ]] || ! print -r -- "$out" | rg -Fqx -- "$line"; then
+      print -r -- "FAIL DURABLE suite=$suite expected=$want"
+      return 1
+    fi
+  done
+  print -r -- "PASS DURABLE scope=native"
+  return 0
+}
+
 leg_source () {
   local out code line n ok bad
   out=$(zsh $ROOT/dev/pin-dune.sh dune build bin/kite.exe test/eval_test.exe browser/program.bc.js 2>&1)
@@ -651,6 +686,7 @@ if [[ $# -ge 2 && $1 == "--leg" ]]; then
     parse) leg_parse; exit $? ;;
     check) leg_check; exit $? ;;
     runtime) leg_runtime; exit $? ;;
+    durable) leg_durable; exit $? ;;
     source) leg_source; exit $? ;;
     browser) leg_browser; exit $? ;;
     acceptance) leg_acceptance; exit $? ;;
@@ -672,7 +708,7 @@ fail=0
 
 # Line 1 names the tree and line 2 carries the frozen kanon denominators.
 # Both figures come from the sidecar and neither is ever gated.
-print -r -- "GATES kite stage=M1-C root=$ROOT"
+print -r -- "GATES kite stage=M2-A root=$ROOT"
 print -r -- "KANON-DENOM serial_ms=$($PY -P -c 'import json, sys
 d = json.load(open(sys.argv[1]))
 print(d["kanon_ocamlopt_ms_per_kloc"])' $ROOT/dev/denominators.json) parallel_ms=$($PY -P -c 'import json, sys
@@ -720,6 +756,7 @@ leg FAST HOUSE SELF zsh $SELF --leg house
 leg MED PARSE SELF zsh $SELF --leg parse
 leg MED CHECK SELF zsh $SELF --leg check
 leg MED RUNTIME SELF zsh $SELF --leg runtime
+leg MED DURABLE SELF zsh $SELF --leg durable
 leg MED SOURCE SELF zsh $SELF --leg source
 leg SLOW BROWSER SELF zsh $SELF --leg browser
 leg M1 ACCEPTANCE SELF zsh $SELF --leg acceptance

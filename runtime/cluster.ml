@@ -21,7 +21,7 @@ type snapshot = {
 }
 
 type command = Start of placement | Stop of placement
-type config = { timeout : int; max_pods : int }
+type config = { timeout : int; max_pods : int; start_nodes : string list option }
 type plan = { plan_epoch : int; planned : command list }
 
 type error =
@@ -47,13 +47,23 @@ end)
 
 let config ~timeout ~max_pods : (config, error) result =
   if timeout <= 0 || max_pods <= 0 then Error Invalid_config
-  else Ok { timeout; max_pods }
+  else Ok { timeout; max_pods; start_nodes = None }
 
 let valid_name (name : string) : bool =
   let valid_char c =
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
     || (c >= '0' && c <= '9') || c = '_' || c = '-' in
   String.length name > 0 && String.for_all valid_char name
+
+let with_start_nodes cfg names =
+  if not (List.for_all valid_name names) ||
+     List.length (List.sort_uniq String.compare names) <> List.length names
+  then Error Invalid_config
+  else
+    let allowed = Option.fold ~none:names
+        ~some:(fun current -> List.filter (fun name -> List.mem name current) names)
+        cfg.start_nodes in
+    Ok { cfg with start_nodes = Some allowed }
 
 let invalid message = Error (Invalid_snapshot message)
 
@@ -156,7 +166,9 @@ let plan_commands (cfg : config) desired (observed : snapshot)
       placements [] in
   let reserved =
     Pods.fold (fun pod _placement names -> Locks.add pod names) placements locks in
-  List.rev_append stops_reversed (starts desired reserved (candidates eligible kept))
+  let starters = Names.filter (fun name _host ->
+      Option.fold ~none:true ~some:(List.mem name) cfg.start_nodes) eligible in
+  List.rev_append stops_reversed (starts desired reserved (candidates starters kept))
 
 let reconcile (cfg : config) ~epoch ~desired (observed : snapshot)
     : (plan, error) result =

@@ -18,7 +18,8 @@ kite/
         subst.ml unify.ml env.ml infer.ml usage.ml error.ml pp.ml
         iface.ml ir.ml lower.ml
   surface/  kite_surface: lexer.ml parser.ml ast.ml print.ml
-  runtime/  cluster.ml kubelet.ml and their interfaces; eval.ml artifact.ml
+  runtime/  cluster.ml kubelet.ml feed.ml service.ml volume.ml taint.ml manifest.ml
+            and their interfaces; eval.ml artifact.ml
   bin/kite.ml  driver: check | build | iface | run | fmt | roundtrip | version
   test/  parse.exe  check.exe  iface.exe  regress.exe  cluster.exe  kubelet.exe
   dev/  gates.sh bench.sh denominators.sh denominators.json
@@ -42,6 +43,11 @@ IndexedDB sequence log with transactional epoch fencing, a leader
 Worker and a two-tab host demonstration. M1-C adds checked source execution
 and the six-behavior browser acceptance corpus, including the hidden-tab
 timing gate, described in [the M1-C brief](dev/stage-M1-C-brief.md).
+
+M2-A adds native models for committed feeds, named services, fenced volume
+checkpoints, visibility taints and manifest admission. See
+[the M2-A brief](dev/stage-M2-A-brief.md) for contracts and validation, and
+[the M2 plan](dev/M2-PLAN.md) for source and browser integration still to come.
 
 After building, serve the repository with `python3 -m http.server 8000
 --bind 127.0.0.1` and open `http://127.0.0.1:8000/browser/index.html`
@@ -116,6 +122,10 @@ The frozen kanon denominators are 1,641.599 serial and 712.803 parallel;
 they are printed and never gated.  Every build goes through
 `dev/pin-dune.sh`, which pins
 the `ctxcat-ocaml` opam switch, and through no other switch.
+
+`zsh dev/gates.sh --leg durable` checks the five M2 native suites. The full
+battery includes this leg. `python3 dev/durable-mutations.py` checks their
+safety oracles against buildable mutations in disposable copies.
 
 `python3 dev/runtime-mutations.py` verifies the native runtime tests
 against six deliberately broken safety rules.  Each mutant must build

@@ -89,8 +89,8 @@ not commit or push.
 
 ## Next: M2
 
-Plan the four Q4 manifests, log-backed named services, node conditions
-and taints, checkpoint/drain behavior, and the twelve-fault acceptance
+The [M2 plan](M2-PLAN.md) separates native recovery and admission models,
+source/browser integration, and the four-manifest, twelve-fault acceptance
 battery. General source-to-WasmGC emission remains a separate backend
 obligation; M1-C uses the explicitly permitted js_of_ocaml development
 path and the required fixed Stage 0 pod workload.

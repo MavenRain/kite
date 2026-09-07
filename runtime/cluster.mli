@@ -38,6 +38,14 @@ type error =
     ticks. A node expires when [now - heartbeat >= timeout]. *)
 val config : timeout:int -> max_pods:int -> (config, error) result
 
+(** Restrict new starts to these unique, valid node identifiers. Existing
+    healthy placements remain retained, including placements on excluded
+    nodes. An empty list permits no new starts. The default [config] has no
+    such restriction. Repeated restrictions intersect, so later visibility
+    filters cannot widen a caller's existing policy. Snapshot health, epoch and reservation checks still
+    apply. This permits a NoSchedule taint without evicting running pods. *)
+val with_start_nodes : config -> string list -> (config, error) result
+
 (** [epoch] must be positive and equal to the observed snapshot epoch.
     [desired] must be in [0, max_pods]; desired pod names are the integers
     from zero through [desired - 1]. Invalid snapshots are refused before
@@ -64,6 +72,7 @@ val reconcile :
 (** Inspect planned commands; this does not authorize their execution. *)
 val commands : plan -> command list
 
+(** Give the leader epoch of this plan. *)
 val epoch : plan -> int
 
 (** Refuse a nonpositive current epoch or one different from the plan's

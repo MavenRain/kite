@@ -1,6 +1,6 @@
 (library
  (name kite_runtime)
- (modules cluster kubelet)
+ (modules cluster kubelet feed service volume taint manifest)
  (flags (:standard -warn-error +a)))
 
 (library
