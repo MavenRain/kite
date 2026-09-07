@@ -1,0 +1,2 @@
+poly : vars=1 rvars=0 ( a0 -> a0 )
+nonval : vars=0 rvars=0 ( t0 -> t0 )

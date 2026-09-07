@@ -1,0 +1,6 @@
+(* A protocol state with no compensation leg (A4, D-B-11). *)
+let undo = 0
+protocol Two {
+  state Start { go : Int -> Next } compensate undo
+  state Next { done : Str -> Start }
+}

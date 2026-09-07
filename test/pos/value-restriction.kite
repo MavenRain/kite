@@ -1,0 +1,4 @@
+(* The value restriction:  a non value right hand side keeps its
+   variables at the current level and stays monomorphic (D-B-7). *)
+let poly = fun x -> x
+let nonval = poly (fun z -> z)

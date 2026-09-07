@@ -1,0 +1,2 @@
+fetch : vars=0 rvars=0 ( Int -> Str )
+text : vars=0 rvars=0 Str

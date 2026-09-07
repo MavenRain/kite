@@ -1,8 +1,13 @@
-; test/dune:  parse.exe, the one test executable of Stage A (D-A-16).
-; The executable reads the two libraries of the tree and nothing else.
+; test/dune:  parse.exe of Stage A (D-A-16), check.exe of Stage B
+; (brief 3.13, D-B-18), iface.exe of Stage B (brief 3.9, D-B-14), and
+; regress.exe for the semantic cases found during Stage B review.
+; One stanza names all four executables.
+; The executables read the four libraries of the tree and nothing else.
+; kite_iface is WRAPPED, so test/iface.ml, whose own module is Iface,
+; reads the library module as Kite_iface.Iface (D-B-65).
 ; -warn-error +a makes a warning an error (D-A-2).
 
-(executable
- (name parse)
- (libraries kite_core kite_surface)
+(executables
+ (names parse check iface regress)
+ (libraries kite_core kite_surface kite_elab kite_iface)
  (flags (:standard -warn-error +a)))

@@ -1,0 +1,15 @@
+a : vars=0 rvars=0 Int
+b : vars=0 rvars=0 Str
+c : vars=0 rvars=0 Bool
+d : vars=0 rvars=0 Bool
+u : vars=0 rvars=0 Unit
+sum : vars=0 rvars=0 Int
+cat : vars=0 rvars=0 Str
+eq : vars=0 rvars=0 Bool
+ne : vars=0 rvars=0 Bool
+lt : vars=0 rvars=0 Bool
+le : vars=0 rvars=0 Bool
+gt : vars=0 rvars=0 Bool
+ge : vars=0 rvars=0 Bool
+both : vars=0 rvars=0 Bool
+either : vars=0 rvars=0 Bool

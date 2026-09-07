@@ -24,7 +24,9 @@
 # NOT ban String.get and String.sub, because brief 3.12 does not ban
 # them:  the leg now reads the brief and nothing more (D-A-25).
 #
-# Legs 1 to 6 read OCaml sources alone, through the glob '*.ml' (D-A-32).
+# Legs 1 to 6 read lib/, surface/, test/ and bin/, and OCaml sources
+# alone, through the glob '*.ml' (D-A-32).  bin/ joins at the fix round
+# of review 1:  the driver is OCaml code, so it holds to the OCaml rules.
 # The rules of brief 3.12 are rules about OCaml code, and test/ holds
 # kite fixtures and their goldens:  a fixture writes a wildcard pattern,
 # a division and the words true and false as kite text, and reading them
@@ -34,7 +36,7 @@
 # ADAPTED from /Users/oobi/Documents/brisk/dev/house.sh (131 lines).  The
 # leg shape, the report_empty helper, the dirs_of and search helpers and
 # the em-dash globs are unchanged.  The brisk directory lists become lib,
-# surface and test;  the brisk disclosed mutable window is dropped,
+# surface, test and bin;  the brisk disclosed mutable window is dropped,
 # because kite discloses none;  three legs are new:  no-option-match,
 # no-bare-division and the raw index and sub members of leg 2.
 
@@ -98,9 +100,9 @@ hits () {
   search -n -U --glob '*.ml' -- $pat "$@"
 }
 
-# Leg 3 over test/ alone, with the one disclosed spelling of D-A-33 taken
-# out of the report.  The filter names the whole spelling, so any other
-# use of the Array module in test/ still fails the leg.
+# Leg 3 over test/ and bin/, with the one disclosed spelling of D-A-33
+# taken out of the report.  The filter names the whole spelling, so any
+# other use of the Array module in those directories still fails the leg.
 hits_state_test () {
   [[ $# -eq 0 ]] && return 0
   local out
@@ -110,9 +112,10 @@ hits_state_test () {
   return 0
 }
 
-all_dirs=(${(f)"$(dirs_of $root/lib $root/surface $root/test)"})
+all_dirs=(${(f)"$(dirs_of $root/lib $root/surface $root/test $root/bin)"})
 core_dirs=(${(f)"$(dirs_of $root/lib $root/surface)"})
 test_dirs=(${(f)"$(dirs_of $root/test)"})
+bin_dirs=(${(f)"$(dirs_of $root/bin)"})
 
 # Leg 1:  no exception anywhere in the tree.
 leg1=$(hits $pat_exn $all_dirs; hits $pat_try $all_dirs)
@@ -123,11 +126,11 @@ report_empty "no-exception" "$leg1"
 leg2=$(hits $pat_partial $all_dirs)
 report_empty "no-wildcard-no-partial" "$leg2"
 
-# Leg 3:  no mutable state.  lib/ holds the rule and surface/ and test/
-# hold to it by choice (brief 3.12).  test/ rides its own search, because
-# argv is an array and Array.to_list Sys.argv is the one spelling that
-# reads it (D-A-33).
-leg3=$(hits $pat_state $core_dirs; hits_state_test $test_dirs)
+# Leg 3:  no mutable state.  lib/ holds the rule and surface/, test/ and
+# bin/ hold to it by choice (brief 3.12).  test/ and bin/ ride their own
+# search, because argv is an array and Array.to_list Sys.argv is the one
+# spelling that reads it (D-A-33).
+leg3=$(hits $pat_state $core_dirs; hits_state_test $test_dirs $bin_dirs)
 report_empty "no-mutable-state" "$leg3"
 
 # Leg 4:  no bool match and no loop keyword.

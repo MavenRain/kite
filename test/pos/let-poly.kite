@@ -1,0 +1,5 @@
+(* A generalized let used at two different instances (D-B-7). *)
+let idf = fun x -> x
+let n = idf 1
+let s = idf "two"
+let inner = let g = fun y -> y in { a = g 1 , b = g true }

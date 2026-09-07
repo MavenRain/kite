@@ -1,0 +1,7 @@
+(* A record literal, extension, restriction, selection and a record
+   annotation. *)
+let base = { a = 1, b = "two" }
+let ext = { c = true | base }
+let smaller = { ext - c }
+let taken = base.a
+let annotated = ({ a = 1 } : { a : Int })

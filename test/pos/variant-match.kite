@@ -1,0 +1,12 @@
+(* An injection, a match over a variant, and the five pattern forms of
+   surface/ast.ml:  a literal, a name, a wildcard, an injection and a
+   record pattern. *)
+let tagged = < ok 1 >
+let onvar = fun v -> match v with | < ok a > -> a | < err b > -> b
+let taken = onvar tagged
+let onlit = fun n -> match n with | 0 -> "zero" | other -> "more"
+let zero = onlit 0
+let onwild = fun k -> match k with | _ -> 7
+let seven = onwild true
+let onrec = fun p -> match p with | { a = u | more } -> u
+let got = onrec { a = 3, b = 4 }

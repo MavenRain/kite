@@ -1,9 +1,40 @@
-; lib/dune:  kite_core, the core library of M0.
-; The library is unwrapped, so Ident, Label, Literal and Error name
-; themselves in surface/ and in test/ (D-A-2).
+; lib/dune:  the three libraries of the M0 tree.
+; kite_core holds the Stage A names and every checker module that reads
+; no surface tree, that is types, kind, subst, row, unify, env, error,
+; ident, label, literal, and the round B3 modules sha256, ir and pp.
+; kite_elab holds the modules that read surface/ast.ml, that is
+; lib/infer.ml at round B1, lib/usage.ml at round B2 and lib/lower.ml at
+; round B3.  surface/dune already makes kite_surface depend on kite_core,
+; so ONE library over the whole of lib/ would close a dependency cycle;
+; the stanzas in one directory keep the file paths the brief names and
+; keep the graph acyclic (D-B-37).
+; A later round that adds a module which reads Ast adds that module name
+; to the kite_elab modules field.
+; kite_iface holds lib/iface.ml ALONE and it is WRAPPED, so the module is
+; Kite_iface.Iface.  test/iface.ml of brief 3.9 builds as test/iface.exe,
+; whose own module is Iface, and two compilation units of one name can
+; not link into one executable, so the library module rides behind the
+; kite_iface prefix and both file paths of the brief stay (D-B-65).
+; The other libraries are unwrapped, so Ident, Label, Literal and Error
+; name themselves in surface/ and in test/ (D-A-2).
 ; -warn-error +a makes a warning an error (D-A-2).
 
 (library
  (name kite_core)
  (wrapped false)
+ (modules :standard \ infer usage lower iface)
+ (flags (:standard -warn-error +a)))
+
+(library
+ (name kite_elab)
+ (wrapped false)
+ (modules infer usage lower)
+ (libraries kite_core kite_surface)
+ (flags (:standard -warn-error +a)))
+
+(library
+ (name kite_iface)
+ (wrapped true)
+ (modules iface)
+ (libraries kite_core kite_surface kite_elab)
  (flags (:standard -warn-error +a)))

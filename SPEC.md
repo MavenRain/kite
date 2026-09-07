@@ -136,6 +136,12 @@ whose tail `| e` is a whole expression;  anything else is the
 restriction form, whose leading expression is an application of atoms
 alone, then `-`, a label and a closing brace.
 
+A parameter pattern starts with a name, a `(`, a `{` or a `_`.  An
+injection pattern is thus written in a match arm or in `let pat = e in
+body` and not in a parameter list.  The checker prints `expected an
+equals sign` for a declaration such as `let f < ok x > = x`, and
+`expected a parameter` for a lambda such as `fun < ok x > -> x`.
+
 ## 4 The operator table
 
 Level 1 binds least.  Application binds tighter than every operator,
@@ -158,28 +164,30 @@ so `not e` is an application.
 Each row is a form that the M0 scope excludes.  Stage A parses the form,
 keeps its text and prints it back, so the surface is whole and a later
 milestone adds the meaning.  Stage B prints the refusal text, because a
-refusal needs the checker.  Every text names the milestone the form
-arrives at.
+refusal needs the checker.  Every text names the declared NAME and the
+milestone the form arrives at, and not the form word (D-B-4).  The
+printed line adds the error name and the range, as in
+`NotYet 1:1-1:1 the declaration x_a arrives at M2`.
 
 | Form | Concrete syntax | Milestone | Refusal text |
 | --- | --- | --- | --- |
-| node | `node NAME` | M1 | the node declaration is not part of M0;  it arrives at M1 |
-| leader | `leader NAME` | M1 | the leader declaration is not part of M0;  it arrives at M1 |
-| registry | `registry NAME` | M1 | the registry declaration is not part of M0;  it arrives at M1 |
-| placement | `placement NAME` | M1 | the placement declaration is not part of M0;  it arrives at M1 |
-| heartbeat | `heartbeat NAME` | M1 | the heartbeat declaration is not part of M0;  it arrives at M1 |
-| pod | `pod NAME` | M1 | the pod declaration is not part of M0;  it arrives at M1 |
-| store | `store NAME` | M1 | the store declaration is not part of M0;  it arrives at M1 |
-| service | `service NAME` | M2 | the service declaration is not part of M0;  it arrives at M2 |
-| taint | `taint NAME` | M2 | the taint declaration is not part of M0;  it arrives at M2 |
-| drain | `drain NAME` | M2 | the drain declaration is not part of M0;  it arrives at M2 |
-| doorbell | `doorbell NAME` | M2 | the doorbell declaration is not part of M0;  it arrives at M2 |
-| volume | `volume NAME` | M2 | the volume declaration is not part of M0;  it arrives at M2 |
-| proof | `proof NAME` | M3 | the proof declaration is not part of M0;  it arrives at M3 |
-| port | `port NAME` | M3 | the port declaration is not part of M0;  it arrives at M3 |
-| fuel | `fuel NAME` | M4 | the fuel declaration is not part of M0;  it arrives at M4 |
-| cost_table | `cost_table NAME` | M4 | the cost_table declaration is not part of M0;  it arrives at M4 |
-| blob | `blob NAME` | M4 | the blob declaration is not part of M0;  it arrives at M4 |
+| node | `node NAME` | M1 | the declaration NAME arrives at M1 |
+| leader | `leader NAME` | M1 | the declaration NAME arrives at M1 |
+| registry | `registry NAME` | M1 | the declaration NAME arrives at M1 |
+| placement | `placement NAME` | M1 | the declaration NAME arrives at M1 |
+| heartbeat | `heartbeat NAME` | M1 | the declaration NAME arrives at M1 |
+| pod | `pod NAME` | M1 | the declaration NAME arrives at M1 |
+| store | `store NAME` | M1 | the declaration NAME arrives at M1 |
+| service | `service NAME` | M2 | the declaration NAME arrives at M2 |
+| taint | `taint NAME` | M2 | the declaration NAME arrives at M2 |
+| drain | `drain NAME` | M2 | the declaration NAME arrives at M2 |
+| doorbell | `doorbell NAME` | M2 | the declaration NAME arrives at M2 |
+| volume | `volume NAME` | M2 | the declaration NAME arrives at M2 |
+| proof | `proof NAME` | M3 | the declaration NAME arrives at M3 |
+| port | `port NAME` | M3 | the declaration NAME arrives at M3 |
+| fuel | `fuel NAME` | M4 | the declaration NAME arrives at M4 |
+| cost_table | `cost_table NAME` | M4 | the declaration NAME arrives at M4 |
+| blob | `blob NAME` | M4 | the declaration NAME arrives at M4 |
 
 The table holds seventeen data rows:  seven M1 forms, five M2 forms, two
 M3 forms and three M4 forms.
@@ -236,5 +244,162 @@ NAME L:C-L:C text
 NAME is the error name, which is `Parse` at Stage A.  `L:C-L:C` is the
 span, the line and the column of the first byte and then of the last
 byte, both 1-based.  text is the message in ASD-STE100, such as
-"expected a closing parenthesis".  A golden under test/neg/ holds the
-first two words of this line, so its first word is `Parse`.
+"expected a closing parenthesis".  A golden of a `parse-` twin under
+test/neg/ holds the name and the span, which `test/parse.ml` compares as
+the first two words of the line.  A golden of a `check-` twin holds the
+error name and no other word, which `test/check.ml` compares against the
+first word of the line.
+
+## 8 The types
+
+The internal grammar of the checker, from `lib/types.ml`.  A type
+variable and a row variable live in two namespaces, so one never
+unifies with the other.
+
+```
+type mult = Many | AtMostOnce
+type tvar = { id : int;  level : int }
+type tvar_row = { rid : int;  rlevel : int }
+type t =
+  | Var of tvar
+  | Con of string
+  | Arrow of t * mult * t
+  | Record of row
+  | Variant of row
+  | Code of row * t
+```
+
+A row is scoped:  `RExt` carries the occurrence index of a label, so a
+label may repeat.  Extension is `RExt`, restriction removes the FIRST
+occurrence and selection reads the FIRST occurrence.
+
+```
+and row =
+  | REmpty
+  | RVar of tvar_row
+  | RExt of Label.t * Label.occ * t * row
+```
+
+`Con` covers the four literal kinds of `lib/literal.ml`, that is `Int`,
+`Str`, `Bool` and `Unit`, one name per kind and no fifth name.  `Many`
+is the plain arrow `->` and `AtMostOnce` is the `-1>` arrow of A2.  The
+kinds are two and nothing else has a kind at M0.
+
+```
+type t =
+  | Type
+  | Row
+```
+
+A binding rides in `Subst.t`, an immutable map from an id to a type,
+and every function that may bind returns the new store.  The store is
+never a `ref`, because the elaborator holds no mutable cell.
+
+## 9 The checks
+
+One row per error name.  The first word of an error line is the name,
+so a golden under `test/neg/` names the error and no other.
+
+| name | what it catches | the twin that shows it |
+| --- | --- | --- |
+| `Parse` | a source the grammar of section 3 refuses | `test/neg/parse-paren.kite` |
+| `Unbound` | a name with no binding | none at M0 |
+| `Mismatch` | two types that do not unify | none at M0 |
+| `OccursType` | a type variable that occurs in the type it would bind | `SB-M2` |
+| `OccursRow` | a row variable that occurs in the row it would bind | `SB-M2` |
+| `RowMissing` | a label absent from a closed row | none at M0 |
+| `RowDuplicate` | a record literal with a repeated label at one occurrence index | none at M0 |
+| `KindMismatch` | a type variable met where a row variable is needed | none at M0 |
+| `Affine` | an at most once binder used more than once | `test/neg/check-affine.kite` |
+| `Capture` | a `Many` arrow that captures an at most once value | `test/neg/check-capture.kite` |
+| `Compensation` | a protocol state with no compensation | `test/neg/check-compensate.kite` |
+| `PeerLost` | a role with no `Peer_lost` leg | `test/neg/check-peer-lost.kite` |
+| `Budget` | an obligation over its printed budget | `test/neg/check-budget.kite` |
+| `IfaceMismatch` | an import whose declared type differs from the exported scheme | `SB-G11` |
+| `NotYet` | an M1 to M4 form, with the milestone in its text | `test/neg/milestones.kite` |
+
+Fifteen names and no sixteenth.  Every function over `Error.t` holds an
+arm for each name and no wildcard arm, so a new name is a compile error
+at every site.
+
+## 10 The .coi format
+
+An interface file is TEXT, ASCII, one record per line, so a consumer
+never re-reads the source.  Every field is a single token with no
+space, so the reader splits a line on one space.  The grammar:
+
+```
+coi 1
+source-sha256 HEX64
+module NAME
+val NAME : SCHEME usage=U
+budget NAME atoms=A constraints=C
+import NAME cost=K deadline_ms=D
+end
+```
+
+The header is two lines:  `coi 1`, where 1 is the format version, then
+`source-sha256` with the sha256 of the source the interface was written
+from.  `module` names the source basename without its extension, and
+every space of that basename becomes an underscore, because every field
+is one token.  Then
+one `val` line per exported top level binding, in declaration order,
+with the scheme printed by `lib/pp.ml` and the usage `Zero`, `Once` or
+`Many` of `lib/usage.ml`.  Then one `budget` line per budget
+annotation, so every budget prints beside the obligation it discharged.
+Then one `import` line per import declaration, with the cost index and
+the per call deadline in whole milliseconds.  The last line is `end`.
+
+The worked example is `test/pos/import-iface.coi`, the interface of
+`test/pos/import-iface.kite`:
+
+```
+coi 1
+source-sha256 c71230d739ebc7c9d40144df3e60c3d39f02058b2b0a6b5be36203a941be07e6
+module import-iface
+val fetch : vars=0 rvars=0 ( Int -> Str ) usage=Once
+val text : vars=0 rvars=0 Str usage=Zero
+import fetch cost=3 deadline_ms=5
+end
+```
+
+`read (write i)` equals `i` for every interface the checker builds.  A
+malformed line is the error `IfaceMismatch` and never an exception.
+
+## 11 The driver
+
+`bin/kite.exe` holds seven verbs.  One row per verb, with its printed
+line and its exit code.
+
+| verb | printed line | exit |
+| --- | --- | --- |
+| `check FILE...` | `CHECK-OK files=N`, or one error line per failure | 0, or 1 |
+| `build FILE` | `BUILD-OK file=PATH ir=PATH bytes=N` | 0, or 1 |
+| `iface FILE` | `IFACE-OK file=PATH exports=N` | 0 |
+| `run` | `run arrives at M1` | 2 |
+| `fmt FILE` | the canonical form of `surface/print.ml` | 0 |
+| `roundtrip FILE` | `ROUNDTRIP-OK file=PATH` or `ROUNDTRIP-FAIL file=PATH` | 0, or 1 |
+| `version` | `kite 0.1.0 ocaml 5.3.0 dune 3.24.0` | 0 |
+
+`check` takes the repeatable option `--iface PATH`, which loads a `.coi`
+interface:  an import whose name matches an exported binding of a loaded
+interface is checked against that exported scheme, and a difference is
+`IfaceMismatch`.  That option is the whole separate compilation edge,
+and it reads no source of the other module.
+
+`build` is parse, check, lower and emit and nothing else at M0.  It
+writes the lowered IR beside the source with the extension `.kir`, so
+`examples/m0-spine.kite` emits `examples/m0-spine.kir`.  A `.kir` file
+is build output:  `.gitignore` holds the row `*.kir`, so it is never
+tracked and never left in the porcelain.
+
+The `run` verb runs NOTHING.  The machine arrives at M1.
+
+No verb and an unknown verb both print the seven verb names and exit 2,
+so an empty file list can never read as a pass.
+
+A path that does not read, that is a missing path and a directory, is
+the error line `the file PATH does not read` and exit 1.  An I/O failure
+that no total test can see, as a file with no read bit or an output
+directory with no write bit, prints the failure text and exits 2, which
+is the code D-B-16 gives to a verb that cannot run.

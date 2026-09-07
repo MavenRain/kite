@@ -1,0 +1,4 @@
+(* An open row used at two label sets (D-B-5). *)
+let get_a = fun r -> r.a
+let one = get_a { a = 1, b = 2 }
+let two = get_a { a = "s", c = true }

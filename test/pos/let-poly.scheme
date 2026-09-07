@@ -1,0 +1,4 @@
+idf : vars=1 rvars=0 ( a0 -> a0 )
+n : vars=0 rvars=0 Int
+s : vars=0 rvars=0 Str
+inner : vars=0 rvars=0 { a ^ 0 : Int , b ^ 0 : Bool }

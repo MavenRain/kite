@@ -1,0 +1,6 @@
+(* A duplicate label with occurrence indices, where selection takes the
+   FIRST occurrence and restriction removes it (D-B-5, D-B-45). *)
+let dup = { a = 1, a = "two" }
+let first = dup.a
+let rest = { dup - a }
+let through_fun = (fun r -> r.a) dup

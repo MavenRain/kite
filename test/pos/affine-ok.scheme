@@ -1,0 +1,2 @@
+once : vars=0 rvars=0 ( Int -1> Int )
+used : vars=0 rvars=0 Int

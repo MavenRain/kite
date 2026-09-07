@@ -1,0 +1,7 @@
+coi 1
+source-sha256 c71230d739ebc7c9d40144df3e60c3d39f02058b2b0a6b5be36203a941be07e6
+module import-iface
+val fetch : vars=0 rvars=0 ( Int -> Str ) usage=Once
+val text : vars=0 rvars=0 Str usage=Zero
+import fetch cost=3 deadline_ms=5
+end

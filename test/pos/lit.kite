@@ -1,0 +1,16 @@
+(* Every literal kind of lib/literal.ml and every operator of D-A-6. *)
+let a = 1
+let b = "hello"
+let c = true
+let d = false
+let u = ()
+let sum = 1 + 2 - 3 * 4 / 5 % 6
+let cat = "a" ^ "b"
+let eq = 1 == 2
+let ne = 1 != 2
+let lt = 1 < 2
+let le = 1 <= 2
+let gt = 1 > 2
+let ge = 1 >= 2
+let both = true && false
+let either = true || false

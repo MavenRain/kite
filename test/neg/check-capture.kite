@@ -1,0 +1,4 @@
+(* The CAPTURE twin:  a Many arrow that closes over an at most once
+   value, which scaling would raise to Many. *)
+let once = (fun x -> x + 1 : Int -1> Int)
+let grab = fun y -> once y

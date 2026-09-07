@@ -1,0 +1,4 @@
+dup : vars=0 rvars=0 { a ^ 0 : Int , a ^ 1 : Str }
+first : vars=0 rvars=0 Int
+rest : vars=0 rvars=0 { a ^ 0 : Str }
+through_fun : vars=0 rvars=0 Int

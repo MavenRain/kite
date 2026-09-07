@@ -1,2 +1,1055 @@
-(* examples/m0-spine.kite:  the M0 numerator placeholder of Stage A. *)
-(* The 1 kloc spine arrives at Stage B, which re-freezes the pin. *)
+(* examples/m0-spine.kite:  the frozen 1 kloc numerator corpus of
+   GATE M0 (D-M0-3, D-B-21).  It is ONE program:  a session store
+   for a tab cluster, written so that every M0 form of
+   surface/ast.ml appears and every declaration checks clean.
+
+   The affine section holds more than twenty -1> binders, so the
+   mutant that empties the use count pass has a corpus to die on
+   (M0-PLAN.md:109).  No M1 to M4 form appears here, because the
+   checker refuses each one with NotYet. *)
+
+(* --- 1  the literal kinds and the fourteen operators --------- *)
+
+let unit_value = ()
+let true_flag = true
+let false_flag = false
+let zero_count = 0
+let store_name = "session-store"
+let sum_of = 1 + 2
+let rest_of = 9 - 4
+let product_of = 3 * 5
+let share_of = 12 / 4
+let remainder_of = 13 % 4
+let joined_name = "tab" ^ "-" ^ "store"
+let same_as = 1 == 1
+let other_than = 1 != 2
+let under = 1 < 2
+let under_or_same = 2 <= 2
+let over = 3 > 2
+let over_or_same = 3 >= 3
+let both_hold = true && true
+let one_holds = false || true
+
+(* --- 2  lambdas, application and the if form ----------------- *)
+
+(* Arithmetic over the tab index 1. *)
+let step_01 = fun n -> n + 1
+let back_01 = fun n -> n - 1
+let scale_01 = fun n -> n * 2
+let split_01 = fun n -> n / 2
+let wrap_01 = fun n -> n % 3
+let mix_01 = fun m n -> step_01 m + back_01 n
+let ranked_01 = mix_01 1 4
+let named_01 = "tab-" ^ store_name
+let gated_01 = if ranked_01 > 1 then ranked_01 else 1
+
+(* Arithmetic over the tab index 2. *)
+let step_02 = fun n -> n + 2
+let back_02 = fun n -> n - 2
+let scale_02 = fun n -> n * 3
+let split_02 = fun n -> n / 3
+let wrap_02 = fun n -> n % 4
+let mix_02 = fun m n -> step_02 m + back_02 n
+let ranked_02 = mix_02 2 5
+let named_02 = "tab-" ^ store_name
+let gated_02 = if ranked_02 > 2 then ranked_02 else 2
+
+(* Arithmetic over the tab index 3. *)
+let step_03 = fun n -> n + 3
+let back_03 = fun n -> n - 3
+let scale_03 = fun n -> n * 4
+let split_03 = fun n -> n / 4
+let wrap_03 = fun n -> n % 5
+let mix_03 = fun m n -> step_03 m + back_03 n
+let ranked_03 = mix_03 3 6
+let named_03 = "tab-" ^ store_name
+let gated_03 = if ranked_03 > 3 then ranked_03 else 3
+
+(* Arithmetic over the tab index 4. *)
+let step_04 = fun n -> n + 4
+let back_04 = fun n -> n - 4
+let scale_04 = fun n -> n * 5
+let split_04 = fun n -> n / 5
+let wrap_04 = fun n -> n % 6
+let mix_04 = fun m n -> step_04 m + back_04 n
+let ranked_04 = mix_04 4 7
+let named_04 = "tab-" ^ store_name
+let gated_04 = if ranked_04 > 4 then ranked_04 else 4
+
+(* Arithmetic over the tab index 5. *)
+let step_05 = fun n -> n + 5
+let back_05 = fun n -> n - 5
+let scale_05 = fun n -> n * 6
+let split_05 = fun n -> n / 6
+let wrap_05 = fun n -> n % 7
+let mix_05 = fun m n -> step_05 m + back_05 n
+let ranked_05 = mix_05 5 8
+let named_05 = "tab-" ^ store_name
+let gated_05 = if ranked_05 > 5 then ranked_05 else 5
+
+(* Arithmetic over the tab index 6. *)
+let step_06 = fun n -> n + 6
+let back_06 = fun n -> n - 6
+let scale_06 = fun n -> n * 7
+let split_06 = fun n -> n / 7
+let wrap_06 = fun n -> n % 8
+let mix_06 = fun m n -> step_06 m + back_06 n
+let ranked_06 = mix_06 6 9
+let named_06 = "tab-" ^ store_name
+let gated_06 = if ranked_06 > 6 then ranked_06 else 6
+
+(* Arithmetic over the tab index 7. *)
+let step_07 = fun n -> n + 7
+let back_07 = fun n -> n - 7
+let scale_07 = fun n -> n * 8
+let split_07 = fun n -> n / 8
+let wrap_07 = fun n -> n % 9
+let mix_07 = fun m n -> step_07 m + back_07 n
+let ranked_07 = mix_07 7 10
+let named_07 = "tab-" ^ store_name
+let gated_07 = if ranked_07 > 7 then ranked_07 else 7
+
+(* Arithmetic over the tab index 8. *)
+let step_08 = fun n -> n + 8
+let back_08 = fun n -> n - 8
+let scale_08 = fun n -> n * 9
+let split_08 = fun n -> n / 9
+let wrap_08 = fun n -> n % 10
+let mix_08 = fun m n -> step_08 m + back_08 n
+let ranked_08 = mix_08 8 11
+let named_08 = "tab-" ^ store_name
+let gated_08 = if ranked_08 > 8 then ranked_08 else 8
+
+(* Arithmetic over the tab index 9. *)
+let step_09 = fun n -> n + 9
+let back_09 = fun n -> n - 9
+let scale_09 = fun n -> n * 10
+let split_09 = fun n -> n / 10
+let wrap_09 = fun n -> n % 11
+let mix_09 = fun m n -> step_09 m + back_09 n
+let ranked_09 = mix_09 9 12
+let named_09 = "tab-" ^ store_name
+let gated_09 = if ranked_09 > 9 then ranked_09 else 9
+
+(* Arithmetic over the tab index 10. *)
+let step_10 = fun n -> n + 10
+let back_10 = fun n -> n - 10
+let scale_10 = fun n -> n * 11
+let split_10 = fun n -> n / 11
+let wrap_10 = fun n -> n % 12
+let mix_10 = fun m n -> step_10 m + back_10 n
+let ranked_10 = mix_10 10 13
+let named_10 = "tab-" ^ store_name
+let gated_10 = if ranked_10 > 10 then ranked_10 else 10
+
+(* --- 3  generalization and the value restriction ------------- *)
+
+(* A generalized let used at two instances, and one right hand
+   side that is not a value and therefore stays monomorphic. *)
+let same_01 = fun x -> x
+let count_01 = same_01 1
+let label_01 = same_01 "row-1"
+let held_01 = same_01 (fun z -> z)
+let pair_01 = let inner = fun y -> y in { left = inner 1 , right = inner true }
+
+(* A generalized let used at two instances, and one right hand
+   side that is not a value and therefore stays monomorphic. *)
+let same_02 = fun x -> x
+let count_02 = same_02 2
+let label_02 = same_02 "row-2"
+let held_02 = same_02 (fun z -> z)
+let pair_02 = let inner = fun y -> y in { left = inner 2 , right = inner true }
+
+(* A generalized let used at two instances, and one right hand
+   side that is not a value and therefore stays monomorphic. *)
+let same_03 = fun x -> x
+let count_03 = same_03 3
+let label_03 = same_03 "row-3"
+let held_03 = same_03 (fun z -> z)
+let pair_03 = let inner = fun y -> y in { left = inner 3 , right = inner true }
+
+(* A generalized let used at two instances, and one right hand
+   side that is not a value and therefore stays monomorphic. *)
+let same_04 = fun x -> x
+let count_04 = same_04 4
+let label_04 = same_04 "row-4"
+let held_04 = same_04 (fun z -> z)
+let pair_04 = let inner = fun y -> y in { left = inner 4 , right = inner true }
+
+(* A generalized let used at two instances, and one right hand
+   side that is not a value and therefore stays monomorphic. *)
+let same_05 = fun x -> x
+let count_05 = same_05 5
+let label_05 = same_05 "row-5"
+let held_05 = same_05 (fun z -> z)
+let pair_05 = let inner = fun y -> y in { left = inner 5 , right = inner true }
+
+(* A generalized let used at two instances, and one right hand
+   side that is not a value and therefore stays monomorphic. *)
+let same_06 = fun x -> x
+let count_06 = same_06 6
+let label_06 = same_06 "row-6"
+let held_06 = same_06 (fun z -> z)
+let pair_06 = let inner = fun y -> y in { left = inner 6 , right = inner true }
+
+(* --- 4  the record forms ------------------------------------- *)
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_01 = { key = "k-1" , size = 1 }
+let wide_01 = { live = true | row_01 }
+let narrow_01 = { wide_01 - size }
+let key_01 = row_01.key
+let size_01 = row_01.size
+let live_01 = wide_01.live
+let typed_01 = ({ key = "k-1" , size = 1 } : { key : Str , size : Int })
+let grown_01 = { stamp = 1 | typed_01 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_02 = { key = "k-2" , size = 2 }
+let wide_02 = { live = true | row_02 }
+let narrow_02 = { wide_02 - size }
+let key_02 = row_02.key
+let size_02 = row_02.size
+let live_02 = wide_02.live
+let typed_02 = ({ key = "k-2" , size = 2 } : { key : Str , size : Int })
+let grown_02 = { stamp = 2 | typed_02 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_03 = { key = "k-3" , size = 3 }
+let wide_03 = { live = true | row_03 }
+let narrow_03 = { wide_03 - size }
+let key_03 = row_03.key
+let size_03 = row_03.size
+let live_03 = wide_03.live
+let typed_03 = ({ key = "k-3" , size = 3 } : { key : Str , size : Int })
+let grown_03 = { stamp = 3 | typed_03 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_04 = { key = "k-4" , size = 4 }
+let wide_04 = { live = true | row_04 }
+let narrow_04 = { wide_04 - size }
+let key_04 = row_04.key
+let size_04 = row_04.size
+let live_04 = wide_04.live
+let typed_04 = ({ key = "k-4" , size = 4 } : { key : Str , size : Int })
+let grown_04 = { stamp = 4 | typed_04 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_05 = { key = "k-5" , size = 5 }
+let wide_05 = { live = true | row_05 }
+let narrow_05 = { wide_05 - size }
+let key_05 = row_05.key
+let size_05 = row_05.size
+let live_05 = wide_05.live
+let typed_05 = ({ key = "k-5" , size = 5 } : { key : Str , size : Int })
+let grown_05 = { stamp = 5 | typed_05 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_06 = { key = "k-6" , size = 6 }
+let wide_06 = { live = true | row_06 }
+let narrow_06 = { wide_06 - size }
+let key_06 = row_06.key
+let size_06 = row_06.size
+let live_06 = wide_06.live
+let typed_06 = ({ key = "k-6" , size = 6 } : { key : Str , size : Int })
+let grown_06 = { stamp = 6 | typed_06 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_07 = { key = "k-7" , size = 7 }
+let wide_07 = { live = true | row_07 }
+let narrow_07 = { wide_07 - size }
+let key_07 = row_07.key
+let size_07 = row_07.size
+let live_07 = wide_07.live
+let typed_07 = ({ key = "k-7" , size = 7 } : { key : Str , size : Int })
+let grown_07 = { stamp = 7 | typed_07 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_08 = { key = "k-8" , size = 8 }
+let wide_08 = { live = true | row_08 }
+let narrow_08 = { wide_08 - size }
+let key_08 = row_08.key
+let size_08 = row_08.size
+let live_08 = wide_08.live
+let typed_08 = ({ key = "k-8" , size = 8 } : { key : Str , size : Int })
+let grown_08 = { stamp = 8 | typed_08 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_09 = { key = "k-9" , size = 9 }
+let wide_09 = { live = true | row_09 }
+let narrow_09 = { wide_09 - size }
+let key_09 = row_09.key
+let size_09 = row_09.size
+let live_09 = wide_09.live
+let typed_09 = ({ key = "k-9" , size = 9 } : { key : Str , size : Int })
+let grown_09 = { stamp = 9 | typed_09 }
+
+(* The record forms:  a literal, an extension, a restriction, a
+   selection and a record annotation. *)
+let row_10 = { key = "k-10" , size = 10 }
+let wide_10 = { live = true | row_10 }
+let narrow_10 = { wide_10 - size }
+let key_10 = row_10.key
+let size_10 = row_10.size
+let live_10 = wide_10.live
+let typed_10 = ({ key = "k-10" , size = 10 } : { key : Str , size : Int })
+let grown_10 = { stamp = 10 | typed_10 }
+
+(* --- 5  open rows -------------------------------------------- *)
+
+(* One open row read at two different label sets. *)
+let read_key_01 = fun r -> r.key
+let from_small_01 = read_key_01 { key = 1 , size = 1 }
+let from_wide_01 = read_key_01 { key = "k" , live = true , size = 1 }
+let read_two_01 = fun r -> { key = r.key , size = r.size }
+let taken_01 = read_two_01 { key = "k" , size = 1 , extra = () }
+
+(* One open row read at two different label sets. *)
+let read_key_02 = fun r -> r.key
+let from_small_02 = read_key_02 { key = 2 , size = 1 }
+let from_wide_02 = read_key_02 { key = "k" , live = true , size = 2 }
+let read_two_02 = fun r -> { key = r.key , size = r.size }
+let taken_02 = read_two_02 { key = "k" , size = 2 , extra = () }
+
+(* One open row read at two different label sets. *)
+let read_key_03 = fun r -> r.key
+let from_small_03 = read_key_03 { key = 3 , size = 1 }
+let from_wide_03 = read_key_03 { key = "k" , live = true , size = 3 }
+let read_two_03 = fun r -> { key = r.key , size = r.size }
+let taken_03 = read_two_03 { key = "k" , size = 3 , extra = () }
+
+(* One open row read at two different label sets. *)
+let read_key_04 = fun r -> r.key
+let from_small_04 = read_key_04 { key = 4 , size = 1 }
+let from_wide_04 = read_key_04 { key = "k" , live = true , size = 4 }
+let read_two_04 = fun r -> { key = r.key , size = r.size }
+let taken_04 = read_two_04 { key = "k" , size = 4 , extra = () }
+
+(* One open row read at two different label sets. *)
+let read_key_05 = fun r -> r.key
+let from_small_05 = read_key_05 { key = 5 , size = 1 }
+let from_wide_05 = read_key_05 { key = "k" , live = true , size = 5 }
+let read_two_05 = fun r -> { key = r.key , size = r.size }
+let taken_05 = read_two_05 { key = "k" , size = 5 , extra = () }
+
+(* One open row read at two different label sets. *)
+let read_key_06 = fun r -> r.key
+let from_small_06 = read_key_06 { key = 6 , size = 1 }
+let from_wide_06 = read_key_06 { key = "k" , live = true , size = 6 }
+let read_two_06 = fun r -> { key = r.key , size = r.size }
+let taken_06 = read_two_06 { key = "k" , size = 6 , extra = () }
+
+(* --- 6  scoped labels ---------------------------------------- *)
+
+(* A duplicate label with occurrence indices.  Selection reads
+   the FIRST occurrence and restriction removes it. *)
+let twice_01 = { slot = 1 , slot = "slot-1" }
+let first_01 = twice_01.slot
+let after_01 = { twice_01 - slot }
+let second_01 = after_01.slot
+
+(* A duplicate label with occurrence indices.  Selection reads
+   the FIRST occurrence and restriction removes it. *)
+let twice_02 = { slot = 2 , slot = "slot-2" }
+let first_02 = twice_02.slot
+let after_02 = { twice_02 - slot }
+let second_02 = after_02.slot
+
+(* A duplicate label with occurrence indices.  Selection reads
+   the FIRST occurrence and restriction removes it. *)
+let twice_03 = { slot = 3 , slot = "slot-3" }
+let first_03 = twice_03.slot
+let after_03 = { twice_03 - slot }
+let second_03 = after_03.slot
+
+(* A duplicate label with occurrence indices.  Selection reads
+   the FIRST occurrence and restriction removes it. *)
+let twice_04 = { slot = 4 , slot = "slot-4" }
+let first_04 = twice_04.slot
+let after_04 = { twice_04 - slot }
+let second_04 = after_04.slot
+
+(* A duplicate label with occurrence indices.  Selection reads
+   the FIRST occurrence and restriction removes it. *)
+let twice_05 = { slot = 5 , slot = "slot-5" }
+let first_05 = twice_05.slot
+let after_05 = { twice_05 - slot }
+let second_05 = after_05.slot
+
+(* --- 7  variants and the pattern forms ----------------------- *)
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_01 = < ok 1 >
+let failed_01 = < err "tab-1" >
+let on_tag_01 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_01 = on_tag_01 tagged_01
+let read_err_01 = on_tag_01 failed_01
+let on_lit_01 = fun n -> match n with | 1 -> "seen" | other -> "more"
+let seen_01 = on_lit_01 1
+let on_wild_01 = fun k -> match k with | _ -> 1
+let any_01 = on_wild_01 true
+let on_rec_01 = fun p -> match p with | { key = u | rest } -> u
+let got_01 = on_rec_01 { key = 1 , size = 1 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_02 = < ok 2 >
+let failed_02 = < err "tab-2" >
+let on_tag_02 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_02 = on_tag_02 tagged_02
+let read_err_02 = on_tag_02 failed_02
+let on_lit_02 = fun n -> match n with | 2 -> "seen" | other -> "more"
+let seen_02 = on_lit_02 2
+let on_wild_02 = fun k -> match k with | _ -> 2
+let any_02 = on_wild_02 true
+let on_rec_02 = fun p -> match p with | { key = u | rest } -> u
+let got_02 = on_rec_02 { key = 2 , size = 2 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_03 = < ok 3 >
+let failed_03 = < err "tab-3" >
+let on_tag_03 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_03 = on_tag_03 tagged_03
+let read_err_03 = on_tag_03 failed_03
+let on_lit_03 = fun n -> match n with | 3 -> "seen" | other -> "more"
+let seen_03 = on_lit_03 3
+let on_wild_03 = fun k -> match k with | _ -> 3
+let any_03 = on_wild_03 true
+let on_rec_03 = fun p -> match p with | { key = u | rest } -> u
+let got_03 = on_rec_03 { key = 3 , size = 3 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_04 = < ok 4 >
+let failed_04 = < err "tab-4" >
+let on_tag_04 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_04 = on_tag_04 tagged_04
+let read_err_04 = on_tag_04 failed_04
+let on_lit_04 = fun n -> match n with | 4 -> "seen" | other -> "more"
+let seen_04 = on_lit_04 4
+let on_wild_04 = fun k -> match k with | _ -> 4
+let any_04 = on_wild_04 true
+let on_rec_04 = fun p -> match p with | { key = u | rest } -> u
+let got_04 = on_rec_04 { key = 4 , size = 4 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_05 = < ok 5 >
+let failed_05 = < err "tab-5" >
+let on_tag_05 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_05 = on_tag_05 tagged_05
+let read_err_05 = on_tag_05 failed_05
+let on_lit_05 = fun n -> match n with | 5 -> "seen" | other -> "more"
+let seen_05 = on_lit_05 5
+let on_wild_05 = fun k -> match k with | _ -> 5
+let any_05 = on_wild_05 true
+let on_rec_05 = fun p -> match p with | { key = u | rest } -> u
+let got_05 = on_rec_05 { key = 5 , size = 5 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_06 = < ok 6 >
+let failed_06 = < err "tab-6" >
+let on_tag_06 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_06 = on_tag_06 tagged_06
+let read_err_06 = on_tag_06 failed_06
+let on_lit_06 = fun n -> match n with | 6 -> "seen" | other -> "more"
+let seen_06 = on_lit_06 6
+let on_wild_06 = fun k -> match k with | _ -> 6
+let any_06 = on_wild_06 true
+let on_rec_06 = fun p -> match p with | { key = u | rest } -> u
+let got_06 = on_rec_06 { key = 6 , size = 6 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_07 = < ok 7 >
+let failed_07 = < err "tab-7" >
+let on_tag_07 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_07 = on_tag_07 tagged_07
+let read_err_07 = on_tag_07 failed_07
+let on_lit_07 = fun n -> match n with | 7 -> "seen" | other -> "more"
+let seen_07 = on_lit_07 7
+let on_wild_07 = fun k -> match k with | _ -> 7
+let any_07 = on_wild_07 true
+let on_rec_07 = fun p -> match p with | { key = u | rest } -> u
+let got_07 = on_rec_07 { key = 7 , size = 7 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_08 = < ok 8 >
+let failed_08 = < err "tab-8" >
+let on_tag_08 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_08 = on_tag_08 tagged_08
+let read_err_08 = on_tag_08 failed_08
+let on_lit_08 = fun n -> match n with | 8 -> "seen" | other -> "more"
+let seen_08 = on_lit_08 8
+let on_wild_08 = fun k -> match k with | _ -> 8
+let any_08 = on_wild_08 true
+let on_rec_08 = fun p -> match p with | { key = u | rest } -> u
+let got_08 = on_rec_08 { key = 8 , size = 8 }
+
+(* A variant literal and a match over the five pattern forms:  an
+   injection, a name, a literal, a wildcard and a record. *)
+let tagged_09 = < ok 9 >
+let failed_09 = < err "tab-9" >
+let on_tag_09 = fun v -> match v with | < ok a > -> a | < err b > -> b
+let read_ok_09 = on_tag_09 tagged_09
+let read_err_09 = on_tag_09 failed_09
+let on_lit_09 = fun n -> match n with | 9 -> "seen" | other -> "more"
+let seen_09 = on_lit_09 9
+let on_wild_09 = fun k -> match k with | _ -> 9
+let any_09 = on_wild_09 true
+let on_rec_09 = fun p -> match p with | { key = u | rest } -> u
+let got_09 = on_rec_09 { key = 9 , size = 9 }
+
+(* --- 8  the at most once arrows of the use count pass -------- *)
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_01 = (fun n -> n + 1 : Int -1> Int)
+let held_lease_01 = lease_01 1
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_02 = (fun n -> n + 2 : Int -1> Int)
+let held_lease_02 = lease_02 2
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_03 = (fun n -> n + 3 : Int -1> Int)
+let held_lease_03 = lease_03 3
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_04 = (fun n -> n + 4 : Int -1> Int)
+let held_lease_04 = lease_04 4
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_05 = (fun n -> n + 5 : Int -1> Int)
+let held_lease_05 = lease_05 5
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_06 = (fun n -> n + 6 : Int -1> Int)
+let held_lease_06 = lease_06 6
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_07 = (fun n -> n + 7 : Int -1> Int)
+let held_lease_07 = lease_07 7
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_08 = (fun n -> n + 8 : Int -1> Int)
+let held_lease_08 = lease_08 8
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_09 = (fun n -> n + 9 : Int -1> Int)
+let held_lease_09 = lease_09 9
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_10 = (fun n -> n + 10 : Int -1> Int)
+let held_lease_10 = lease_10 10
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_11 = (fun n -> n + 11 : Int -1> Int)
+let held_lease_11 = lease_11 11
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_12 = (fun n -> n + 12 : Int -1> Int)
+let held_lease_12 = lease_12 12
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_13 = (fun n -> n + 13 : Int -1> Int)
+let held_lease_13 = lease_13 13
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_14 = (fun n -> n + 14 : Int -1> Int)
+let held_lease_14 = lease_14 14
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_15 = (fun n -> n + 15 : Int -1> Int)
+let held_lease_15 = lease_15 15
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_16 = (fun n -> n + 16 : Int -1> Int)
+let held_lease_16 = lease_16 16
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_17 = (fun n -> n + 17 : Int -1> Int)
+let held_lease_17 = lease_17 17
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_18 = (fun n -> n + 18 : Int -1> Int)
+let held_lease_18 = lease_18 18
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_19 = (fun n -> n + 19 : Int -1> Int)
+let held_lease_19 = lease_19 19
+
+(* An at most once arrow.  The binder carries the -1> bit and it
+   is used exactly one time, so the use count pass reads Once. *)
+let lease_20 = (fun n -> n + 20 : Int -1> Int)
+let held_lease_20 = lease_20 20
+
+(* A second at most once shape, over the string kind. *)
+let claim_01 = (fun s -> s ^ "-1" : Str -1> Str)
+let held_claim_01 = claim_01 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_02 = (fun s -> s ^ "-2" : Str -1> Str)
+let held_claim_02 = claim_02 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_03 = (fun s -> s ^ "-3" : Str -1> Str)
+let held_claim_03 = claim_03 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_04 = (fun s -> s ^ "-4" : Str -1> Str)
+let held_claim_04 = claim_04 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_05 = (fun s -> s ^ "-5" : Str -1> Str)
+let held_claim_05 = claim_05 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_06 = (fun s -> s ^ "-6" : Str -1> Str)
+let held_claim_06 = claim_06 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_07 = (fun s -> s ^ "-7" : Str -1> Str)
+let held_claim_07 = claim_07 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_08 = (fun s -> s ^ "-8" : Str -1> Str)
+let held_claim_08 = claim_08 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_09 = (fun s -> s ^ "-9" : Str -1> Str)
+let held_claim_09 = claim_09 "tab"
+
+(* A second at most once shape, over the string kind. *)
+let claim_10 = (fun s -> s ^ "-10" : Str -1> Str)
+let held_claim_10 = claim_10 "tab"
+
+(* --- 9  imports ---------------------------------------------- *)
+
+(* An import with its cost index and its per call deadline. *)
+import fetch_01 : Int -1> Str cost 1 deadline 5
+let fetched_01 = fetch_01 1
+
+(* An import with its cost index and its per call deadline. *)
+import fetch_02 : Int -1> Str cost 2 deadline 6
+let fetched_02 = fetch_02 2
+
+(* An import with its cost index and its per call deadline. *)
+import fetch_03 : Int -1> Str cost 3 deadline 7
+let fetched_03 = fetch_03 3
+
+(* An import with its cost index and its per call deadline. *)
+import fetch_04 : Int -1> Str cost 4 deadline 8
+let fetched_04 = fetch_04 4
+
+(* An import with its cost index and its per call deadline. *)
+import fetch_05 : Int -1> Str cost 5 deadline 9
+let fetched_05 = fetch_05 5
+
+(* An import with its cost index and its per call deadline. *)
+import fetch_06 : Int -1> Str cost 6 deadline 10
+let fetched_06 = fetch_06 6
+
+(* An import at the plain arrow, read twice. *)
+import lookup_01 : Str -> Int cost 1 deadline 3
+let looked_01 = lookup_01 "tab-1"
+let looked_again_01 = lookup_01 "tab-2"
+
+(* An import at the plain arrow, read twice. *)
+import lookup_02 : Str -> Int cost 2 deadline 4
+let looked_02 = lookup_02 "tab-2"
+let looked_again_02 = lookup_02 "tab-3"
+
+(* An import at the plain arrow, read twice. *)
+import lookup_03 : Str -> Int cost 3 deadline 5
+let looked_03 = lookup_03 "tab-3"
+let looked_again_03 = lookup_03 "tab-4"
+
+(* An import at the plain arrow, read twice. *)
+import lookup_04 : Str -> Int cost 4 deadline 6
+let looked_04 = lookup_04 "tab-4"
+let looked_again_04 = lookup_04 "tab-5"
+
+(* --- 10  protocols and roles --------------------------------- *)
+
+(* A protocol whose every state declares the compensation the
+   reaper runs on lock loss, and a role that answers every leg,
+   the Peer_lost leg and the abort leg. *)
+let undo_01 = 1
+let redo_01 = 2
+protocol Lease01 {
+  state Idle { take : Int -> Busy } compensate undo_01
+  state Busy { drop : Str -> Idle } compensate redo_01
+}
+role Holder01 : Lease01 {
+  take a -> a,
+  drop b -> b,
+  Peer_lost -> 1,
+  abort -> 2
+}
+
+(* A protocol whose every state declares the compensation the
+   reaper runs on lock loss, and a role that answers every leg,
+   the Peer_lost leg and the abort leg. *)
+let undo_02 = 2
+let redo_02 = 3
+protocol Lease02 {
+  state Idle { take : Int -> Busy } compensate undo_02
+  state Busy { drop : Str -> Idle } compensate redo_02
+}
+role Holder02 : Lease02 {
+  take a -> a,
+  drop b -> b,
+  Peer_lost -> 2,
+  abort -> 3
+}
+
+(* A protocol whose every state declares the compensation the
+   reaper runs on lock loss, and a role that answers every leg,
+   the Peer_lost leg and the abort leg. *)
+let undo_03 = 3
+let redo_03 = 4
+protocol Lease03 {
+  state Idle { take : Int -> Busy } compensate undo_03
+  state Busy { drop : Str -> Idle } compensate redo_03
+}
+role Holder03 : Lease03 {
+  take a -> a,
+  drop b -> b,
+  Peer_lost -> 3,
+  abort -> 4
+}
+
+(* A protocol whose every state declares the compensation the
+   reaper runs on lock loss, and a role that answers every leg,
+   the Peer_lost leg and the abort leg. *)
+let undo_04 = 4
+let redo_04 = 5
+protocol Lease04 {
+  state Idle { take : Int -> Busy } compensate undo_04
+  state Busy { drop : Str -> Idle } compensate redo_04
+}
+role Holder04 : Lease04 {
+  take a -> a,
+  drop b -> b,
+  Peer_lost -> 4,
+  abort -> 5
+}
+
+(* A protocol whose every state declares the compensation the
+   reaper runs on lock loss, and a role that answers every leg,
+   the Peer_lost leg and the abort leg. *)
+let undo_05 = 5
+let redo_05 = 6
+protocol Lease05 {
+  state Idle { take : Int -> Busy } compensate undo_05
+  state Busy { drop : Str -> Idle } compensate redo_05
+}
+role Holder05 : Lease05 {
+  take a -> a,
+  drop b -> b,
+  Peer_lost -> 5,
+  abort -> 6
+}
+
+(* A protocol whose every state declares the compensation the
+   reaper runs on lock loss, and a role that answers every leg,
+   the Peer_lost leg and the abort leg. *)
+let undo_06 = 6
+let redo_06 = 7
+protocol Lease06 {
+  state Idle { take : Int -> Busy } compensate undo_06
+  state Busy { drop : Str -> Idle } compensate redo_06
+}
+role Holder06 : Lease06 {
+  take a -> a,
+  drop b -> b,
+  Peer_lost -> 6,
+  abort -> 7
+}
+
+(* --- 11  budget annotations ---------------------------------- *)
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 49 , constraints = 17 }
+let bounded_01 = fun x y -> if x < y then x + y else x - y
+let used_bound_01 = bounded_01 1 2
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 50 , constraints = 18 }
+let bounded_02 = fun x y -> if x < y then x + y else x - y
+let used_bound_02 = bounded_02 2 3
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 51 , constraints = 19 }
+let bounded_03 = fun x y -> if x < y then x + y else x - y
+let used_bound_03 = bounded_03 3 4
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 52 , constraints = 20 }
+let bounded_04 = fun x y -> if x < y then x + y else x - y
+let used_bound_04 = bounded_04 4 5
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 53 , constraints = 21 }
+let bounded_05 = fun x y -> if x < y then x + y else x - y
+let used_bound_05 = bounded_05 5 6
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 54 , constraints = 22 }
+let bounded_06 = fun x y -> if x < y then x + y else x - y
+let used_bound_06 = bounded_06 6 7
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 55 , constraints = 23 }
+let bounded_07 = fun x y -> if x < y then x + y else x - y
+let used_bound_07 = bounded_07 7 8
+
+(* A budget annotation whose caps hold over the wrapped
+   declaration:  the atoms and the constraints it raises stay at
+   or under the printed pair. *)
+@budget { atoms = 56 , constraints = 24 }
+let bounded_08 = fun x y -> if x < y then x + y else x - y
+let used_bound_08 = bounded_08 8 9
+
+(* --- 12  manifests ------------------------------------------- *)
+
+(* A declarations only manifest.  The reconciler proof arrives at
+   M3, so the manifest is typed and nothing more. *)
+manifest Deploy01 { pod p01 { image = "tab-1" , replicas = 1 } , service s01 { port = 8001 } }
+
+(* A declarations only manifest.  The reconciler proof arrives at
+   M3, so the manifest is typed and nothing more. *)
+manifest Deploy02 { pod p02 { image = "tab-2" , replicas = 2 } , service s02 { port = 8002 } }
+
+(* A declarations only manifest.  The reconciler proof arrives at
+   M3, so the manifest is typed and nothing more. *)
+manifest Deploy03 { pod p03 { image = "tab-3" , replicas = 3 } , service s03 { port = 8003 } }
+
+(* A declarations only manifest.  The reconciler proof arrives at
+   M3, so the manifest is typed and nothing more. *)
+manifest Deploy04 { pod p04 { image = "tab-4" , replicas = 4 } , service s04 { port = 8004 } }
+
+(* A declarations only manifest.  The reconciler proof arrives at
+   M3, so the manifest is typed and nothing more. *)
+manifest Deploy05 { pod p05 { image = "tab-5" , replicas = 5 } , service s05 { port = 8005 } }
+
+(* A declarations only manifest.  The reconciler proof arrives at
+   M3, so the manifest is typed and nothing more. *)
+manifest Deploy06 { pod p06 { image = "tab-6" , replicas = 6 } , service s06 { port = 8006 } }
+
+(* --- 13  freeze declarations --------------------------------- *)
+
+(* A freeze declaration.  Its handler row is { store } alone. *)
+let handler_01 = fun x -> x
+freeze { store } = handler_01
+
+(* A freeze declaration.  Its handler row is { store } alone. *)
+let handler_02 = fun x -> x
+freeze { store } = handler_02
+
+(* A freeze declaration.  Its handler row is { store } alone. *)
+let handler_03 = fun x -> x
+freeze { store } = handler_03
+
+(* --- 14  recursive groups ------------------------------------ *)
+
+(* A recursive group.  The group generalizes together, so both
+   names leave the group at one scheme. *)
+let rec even_01 = fun n -> if n == 0 then true else odd_01 (n - 1)
+and odd_01 = fun n -> if n == 0 then false else even_01 (n - 1)
+let is_even_01 = even_01 2
+let is_odd_01 = odd_01 3
+
+(* A recursive group.  The group generalizes together, so both
+   names leave the group at one scheme. *)
+let rec even_02 = fun n -> if n == 0 then true else odd_02 (n - 1)
+and odd_02 = fun n -> if n == 0 then false else even_02 (n - 1)
+let is_even_02 = even_02 4
+let is_odd_02 = odd_02 5
+
+(* A recursive group.  The group generalizes together, so both
+   names leave the group at one scheme. *)
+let rec even_03 = fun n -> if n == 0 then true else odd_03 (n - 1)
+and odd_03 = fun n -> if n == 0 then false else even_03 (n - 1)
+let is_even_03 = even_03 6
+let is_odd_03 = odd_03 7
+
+(* A recursive group.  The group generalizes together, so both
+   names leave the group at one scheme. *)
+let rec even_04 = fun n -> if n == 0 then true else odd_04 (n - 1)
+and odd_04 = fun n -> if n == 0 then false else even_04 (n - 1)
+let is_even_04 = even_04 8
+let is_odd_04 = odd_04 9
+
+(* A recursive group.  The group generalizes together, so both
+   names leave the group at one scheme. *)
+let rec even_05 = fun n -> if n == 0 then true else odd_05 (n - 1)
+and odd_05 = fun n -> if n == 0 then false else even_05 (n - 1)
+let is_even_05 = even_05 10
+let is_odd_05 = odd_05 11
+
+(* A recursive group.  The group generalizes together, so both
+   names leave the group at one scheme. *)
+let rec even_06 = fun n -> if n == 0 then true else odd_06 (n - 1)
+and odd_06 = fun n -> if n == 0 then false else even_06 (n - 1)
+let is_even_06 = even_06 12
+let is_odd_06 = odd_06 13
+
+(* --- 15  the pipeline the lowering pass erases --------------- *)
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_01 = fun f x -> f x
+let twice_apply_01 = fun f x -> f (f x)
+let chain_01 = let base = fun n -> n + 1 in twice_apply_01 base 1
+let route_01 = if chain_01 >= 1 then "high" else "low"
+let folded_01 = apply_01 (fun n -> n * 2) chain_01
+let report_01 = { route = route_01 , folded = folded_01 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_02 = fun f x -> f x
+let twice_apply_02 = fun f x -> f (f x)
+let chain_02 = let base = fun n -> n + 2 in twice_apply_02 base 2
+let route_02 = if chain_02 >= 2 then "high" else "low"
+let folded_02 = apply_02 (fun n -> n * 2) chain_02
+let report_02 = { route = route_02 , folded = folded_02 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_03 = fun f x -> f x
+let twice_apply_03 = fun f x -> f (f x)
+let chain_03 = let base = fun n -> n + 3 in twice_apply_03 base 3
+let route_03 = if chain_03 >= 3 then "high" else "low"
+let folded_03 = apply_03 (fun n -> n * 2) chain_03
+let report_03 = { route = route_03 , folded = folded_03 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_04 = fun f x -> f x
+let twice_apply_04 = fun f x -> f (f x)
+let chain_04 = let base = fun n -> n + 4 in twice_apply_04 base 4
+let route_04 = if chain_04 >= 4 then "high" else "low"
+let folded_04 = apply_04 (fun n -> n * 2) chain_04
+let report_04 = { route = route_04 , folded = folded_04 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_05 = fun f x -> f x
+let twice_apply_05 = fun f x -> f (f x)
+let chain_05 = let base = fun n -> n + 5 in twice_apply_05 base 5
+let route_05 = if chain_05 >= 5 then "high" else "low"
+let folded_05 = apply_05 (fun n -> n * 2) chain_05
+let report_05 = { route = route_05 , folded = folded_05 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_06 = fun f x -> f x
+let twice_apply_06 = fun f x -> f (f x)
+let chain_06 = let base = fun n -> n + 6 in twice_apply_06 base 6
+let route_06 = if chain_06 >= 6 then "high" else "low"
+let folded_06 = apply_06 (fun n -> n * 2) chain_06
+let report_06 = { route = route_06 , folded = folded_06 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_07 = fun f x -> f x
+let twice_apply_07 = fun f x -> f (f x)
+let chain_07 = let base = fun n -> n + 7 in twice_apply_07 base 7
+let route_07 = if chain_07 >= 7 then "high" else "low"
+let folded_07 = apply_07 (fun n -> n * 2) chain_07
+let report_07 = { route = route_07 , folded = folded_07 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_08 = fun f x -> f x
+let twice_apply_08 = fun f x -> f (f x)
+let chain_08 = let base = fun n -> n + 8 in twice_apply_08 base 8
+let route_08 = if chain_08 >= 8 then "high" else "low"
+let folded_08 = apply_08 (fun n -> n * 2) chain_08
+let report_08 = { route = route_08 , folded = folded_08 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_09 = fun f x -> f x
+let twice_apply_09 = fun f x -> f (f x)
+let chain_09 = let base = fun n -> n + 9 in twice_apply_09 base 9
+let route_09 = if chain_09 >= 9 then "high" else "low"
+let folded_09 = apply_09 (fun n -> n * 2) chain_09
+let report_09 = { route = route_09 , folded = folded_09 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_10 = fun f x -> f x
+let twice_apply_10 = fun f x -> f (f x)
+let chain_10 = let base = fun n -> n + 10 in twice_apply_10 base 10
+let route_10 = if chain_10 >= 10 then "high" else "low"
+let folded_10 = apply_10 (fun n -> n * 2) chain_10
+let report_10 = { route = route_10 , folded = folded_10 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_11 = fun f x -> f x
+let twice_apply_11 = fun f x -> f (f x)
+let chain_11 = let base = fun n -> n + 11 in twice_apply_11 base 11
+let route_11 = if chain_11 >= 11 then "high" else "low"
+let folded_11 = apply_11 (fun n -> n * 2) chain_11
+let report_11 = { route = route_11 , folded = folded_11 }
+
+(* A nested let, an if over a comparison and a chain of three
+   applications, which is the shape the lowering pass erases. *)
+let apply_12 = fun f x -> f x
+let twice_apply_12 = fun f x -> f (f x)
+let chain_12 = let base = fun n -> n + 12 in twice_apply_12 base 12
+let route_12 = if chain_12 >= 12 then "high" else "low"
+let folded_12 = apply_12 (fun n -> n * 2) chain_12
+let report_12 = { route = route_12 , folded = folded_12 }
+
+(* The last declaration names the store the program builds. *)
+let m0_spine = { name = store_name , tabs = ranked_01 , live = true }

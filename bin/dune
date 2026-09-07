@@ -1,0 +1,10 @@
+; bin/dune:  kite.exe, the driver of brief 3.11 (D-B-16) with the seven
+; verbs of M0-PLAN.md:64.
+; It reads the four libraries of the tree and nothing else.  kite_iface
+; is WRAPPED, so the interface module reads as Kite_iface.Iface (D-B-65).
+; -warn-error +a makes a warning an error (D-A-2).
+
+(executable
+ (name kite)
+ (libraries kite_core kite_surface kite_elab kite_iface)
+ (flags (:standard -warn-error +a)))

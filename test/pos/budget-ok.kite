@@ -1,0 +1,7 @@
+(* A budget annotation that names the caps in force, over a declaration
+   whose atoms and constraints stay under them (A5, D-B-10).  Both caps
+   sit under the defaults and both are tight:  atoms = 5 and
+   constraints = 0 each refuse this declaration. *)
+@budget { atoms = 6 , constraints = 1 }
+let guarded = fun x y -> if x < y then x + y else x - y
+let used = guarded 1 2

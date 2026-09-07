@@ -3,12 +3,13 @@
 # The M0 gate battery.  Example:
 #   zsh /Users/oobi/Documents/kite/dev/gates.sh
 #
-# At Stage A exactly four legs run, BUILD, HOUSE, PARSE and DENOMINATORS,
-# because they are the legs of the stage row of the Stage A brief 3.9.
-# Every other leg of plan section 9 is absent, not stubbed:  a leg with
-# nothing to check is a vacuous pass.  The FLOOR leg and the
-# TRUSTED-LINES leg arrive at Stage B, so dev/trusted-lines.sh is not
-# called here.  Each stage adds its own legs.
+# At Stage B seven legs run, BUILD, HOUSE, PARSE, CHECK, TRUSTED-LINES,
+# DENOMINATORS and FLOOR, which are the legs of the stage row of the
+# Stage B brief 3.17.  The four legs of Stage A are unchanged.  The
+# CHECK leg, the TRUSTED-LINES leg and the FLOOR leg arrive here in
+# round B4 with the corpora they read (D-B-26, D-B-28, D-B-24).  Every
+# other leg of plan section 9 is absent, not stubbed:  a leg with
+# nothing to check is a vacuous pass.
 #
 # Each leg prints one PASS or FAIL line.  A FAIL adds the leg's captured
 # output under its line.  Every leg runs even when an earlier one failed,
@@ -79,6 +80,12 @@ MED=30
 SLOW=120
 SUITE=300
 
+# The fixture count of the PARSE leg.  D-B-27 pins the count EXACTLY at
+# Stage B:  a short list is a FAIL and never a loose pass, so the leg
+# tests equality and not a floor.  dev/run-stage-B.sh SB-G13 reads this
+# same line, so the number lives in one place.
+PARSE_FIXTURES=46
+
 # gate_timed TIER NAME CMD...
 # Runs one leg under the named tier, records the elapsed wall time in
 # milliseconds, and forwards the leg's output and exit code unchanged.
@@ -145,7 +152,7 @@ leg_house () {
 
 # PARSE (brief 3.9).  The leg builds first, so one leg alone is honest,
 # then runs test/parse.exe over the round-trip fixtures, the positive
-# fixtures of the later stages and the Parse twins.  A list shorter than
+# fixtures, every twin of test/neg and the spine (D-B-27).  A list shorter than
 # two entries is a failure, because an empty glob would otherwise pass
 # with nothing checked.
 leg_parse () {
@@ -161,7 +168,8 @@ leg_parse () {
   local files=(
     $ROOT/test/roundtrip/*.kite(N)
     $ROOT/test/pos/*.kite(N)
-    $ROOT/test/neg/parse-*.kite(N)
+    $ROOT/test/neg/*.kite(N)
+    $ROOT/examples/m0-spine.kite
   )
   if [[ ${#files} -lt 2 ]]; then
     print -r -- "parse fixtures=${#files}"
@@ -173,10 +181,11 @@ leg_parse () {
   print -r -- "$out"
   line=$(print -r -- "$out" | rg -- '^PARSE files=')
   n=$(field "$line" files)
-  if [[ $code -eq 0 && -n $n ]]; then
+  if [[ $code -eq 0 && $n == $PARSE_FIXTURES ]]; then
     print -r -- "PASS PARSE fixtures=$n"
     return 0
   fi
+  print -r -- "parse fixtures=${n:-0} want=$PARSE_FIXTURES"
   print -r -- "FAIL PARSE"
   return 1
 }
@@ -279,6 +288,255 @@ print(len(d["kite_corpus"]["files"]))' $json 2>&1)
   return 0
 }
 
+# CHECK (brief 3.9, D-B-26).  The leg builds first, so one leg alone is
+# honest, then runs test/check.exe over the positive fixtures, the six
+# Stage B twins and the spine.  A list shorter than two entries is a
+# failure, because an empty glob would otherwise pass with nothing
+# checked.  The name is CHECK and not SUITE-CHECK (D-B-26).
+leg_check () {
+  local out code line p q
+  out=$(zsh $ROOT/dev/pin-dune.sh dune build @all 2>&1)
+  code=$?
+  if [[ $code -ne 0 || -n $out ]]; then
+    print -r -- "build exit=$code"
+    print -r -- "$out"
+    print -r -- "FAIL CHECK"
+    return 1
+  fi
+  local files=(
+    $ROOT/test/pos/*.kite(N)
+    $ROOT/test/neg/check-*.kite(N)
+    $ROOT/test/neg/milestones.kite(N)
+    $ROOT/examples/m0-spine.kite
+  )
+  if [[ ${#files} -lt 2 ]]; then
+    print -r -- "check fixtures=${#files}"
+    print -r -- "FAIL CHECK"
+    return 1
+  fi
+  out=$($ROOT/_build/default/test/check.exe $files 2>&1)
+  code=$?
+  print -r -- "$out"
+  line=$(print -r -- "$out" | rg -- '^CHECK files=')
+  p=$(field "$line" pos)
+  q=$(field "$line" neg)
+  if [[ $code -ne 0 || ${p:-0} -lt 13 || ${q:-0} -lt 6 ]]; then
+    print -r -- "FAIL CHECK"
+    return 1
+  fi
+  out=$($ROOT/_build/default/test/regress.exe 2>&1)
+  code=$?
+  print -r -- "$out"
+  if [[ $code -ne 0 ]] || ! print -r -- "$out" | rg -q '^REGRESS tests=[1-9][0-9]* ok=[1-9][0-9]* fail=0$'; then
+    print -r -- "FAIL CHECK"
+    return 1
+  fi
+  print -r -- "PASS CHECK positives=$p twins=$q"
+  return 0
+}
+
+# TRUSTED-LINES (brief 3.9, D-B-28).  dev/trusted-lines.sh counts the
+# eight believed elaborator files of M0-PLAN.md:135 against the 2,400
+# line budget of D-M0-5.  Under --require a missing file fails, so the
+# leg can never pass over an absent elaborator.  The leg body prints the
+# verdict line, because dev/trusted-lines.sh prints its own count line
+# and no PASS line (D-B-32).
+leg_trusted_lines () {
+  local out code
+  out=$(zsh $ROOT/dev/trusted-lines.sh --require $ROOT 2>&1)
+  code=$?
+  print -r -- "$out"
+  if [[ $code -eq 0 ]] && print -r -- "$out" | rg -q -- '^TRUSTED-LINES elaborator=[0-9]+/2400 OK$'; then
+    print -r -- "PASS TRUSTED-LINES"
+    return 0
+  fi
+  print -r -- "FAIL TRUSTED-LINES"
+  return 1
+}
+
+# FLOOR, GATE M0 (brief 3.17, M0-PLAN.md:98-109).  The leg is the R3
+# speed gate:  the whole pipeline of the numerator corpus per kloc
+# against raw ocamlopt -c over the frozen floor corpus per kloc, both
+# re-measured in this run.  The leg PRINTS the host load and it NEVER
+# moves the bound (D-B-25).
+FLOOR_PIN=/Users/oobi/Documents/affine-lang-tot-pin
+
+# The load average, read by uptime.  sysctl -n vm.loadavg is denied in a
+# sandboxed agent shell, so it is the fallback and never the first
+# reader (brief section 2).
+floor_load () {
+  if command -v uptime > /dev/null 2>&1; then
+    uptime | awk '{ n = split($0, a, ":");  s = a[n];  split(s, b, " ");  v = b[1];  gsub(/,/, "", v);  print v }'
+  else
+    sysctl -n vm.loadavg | awk '{ print $2 }'
+  fi
+}
+
+# The median of one bench.sh line.
+floor_median () {
+  print -r -- "$1" | awk '{ for (i = 1; i <= NF; i = i + 1) { if (index($i, "median_ms=") == 1) { print substr($i, 11) } } }'
+}
+
+# One measured block:  the minute and the load before, five pipeline
+# runs, five floor runs, then the minute and the load after.  It prints
+# one line of six fields joined by a bar, and it removes the copy it
+# made (D-M0-4).
+floor_measure () {
+  local copy=${TMPDIR:-/tmp}/kite-floor-$$
+  local m1 m2 l1 l2 pipe flo out
+  rm -rf $copy
+  mkdir -p $copy || return 9
+  cp $FLOOR_PATHS $copy/ || { rm -rf $copy;  return 9 }
+  local compile_args=(zsh $ROOT/dev/pin-dune.sh -C $copy ocamlfind ocamlopt -c -package str $FLOOR_NAMES)
+  local compile_quoted=("${(@q)compile_args}")
+  local compile="${(j: :)compile_quoted}"
+  local pipe_args=($ROOT/_build/default/bin/kite.exe build $ROOT/examples/m0-spine.kite)
+  local pipe_quoted=("${(@q)pipe_args}")
+  local pipeline="${(j: :)pipe_quoted}"
+  export RUNS=5
+  l1=$(floor_load)
+  m1=$(date -u +%Y-%m-%dT%H:%M)
+  out=$(zsh $ROOT/dev/bench.sh pipeline "$pipeline" 2>&1)
+  if [[ $? -ne 0 ]]; then
+    rm -rf $copy
+    print -r -- "BENCH-PIPELINE [$out]"
+    return 9
+  fi
+  pipe=$(floor_median "$out")
+  out=$(zsh $ROOT/dev/bench.sh floor "$compile" 2>&1)
+  if [[ $? -ne 0 ]]; then
+    rm -rf $copy
+    print -r -- "BENCH-FLOOR [$out]"
+    return 9
+  fi
+  flo=$(floor_median "$out")
+  m2=$(date -u +%Y-%m-%dT%H:%M)
+  l2=$(floor_load)
+  rm -rf $copy
+  print -r -- "$m1|$m2|$pipe|$flo|$l1|$l2"
+  return 0
+}
+
+leg_floor () {
+  local spine=$ROOT/examples/m0-spine.kite
+  local out code s
+  local -a cards
+  cards=($ROOT/examples/m0-spine.sha256 $ROOT/examples/m0-spine.lines
+         $ROOT/dev/floor-corpus.sha256 $ROOT/dev/floor-corpus.lines
+         $ROOT/dev/floor-corpus.txt $spine)
+  for s in $cards; do
+    if [[ -f $s ]]; then : ; else
+      print -r -- "floor sidecar detail=absent $s"
+      print -r -- "GATE-FAIL floor sidecar missing"
+      print -r -- "FAIL FLOOR"
+      return 1
+    fi
+  done
+  out=$(cd $ROOT/examples && shasum -a 256 -c m0-spine.sha256 2>&1)
+  if [[ $? -ne 0 ]]; then
+    print -r -- "floor sidecar detail=[$out]"
+    print -r -- "GATE-FAIL floor sidecar missing"
+    print -r -- "FAIL FLOOR"
+    return 1
+  fi
+  print -r -- "$out"
+  out=$(cd $ROOT/dev && shasum -a 256 -c floor-corpus.sha256 2>&1)
+  if [[ $? -ne 0 ]]; then
+    print -r -- "floor sidecar detail=[$out]"
+    print -r -- "GATE-FAIL floor sidecar missing"
+    print -r -- "FAIL FLOOR"
+    return 1
+  fi
+  print -r -- "$out"
+
+  FLOOR_NAMES=(${(f)"$(cat $ROOT/dev/floor-corpus.txt)"})
+  FLOOR_PATHS=()
+  for s in $FLOOR_NAMES; do
+    if [[ -f $FLOOR_PIN/lib/$s ]]; then
+      FLOOR_PATHS+=($FLOOR_PIN/lib/$s)
+    else
+      print -r -- "floor sidecar detail=absent $FLOOR_PIN/lib/$s"
+      print -r -- "GATE-FAIL floor sidecar missing"
+      print -r -- "FAIL FLOOR"
+      return 1
+    fi
+  done
+
+  local num_lines flo_lines want_num want_flo num_sha flo_sha
+  num_lines=$(wc -l < $spine | tr -d ' ')
+  flo_lines=$(cat $FLOOR_PATHS | wc -l | tr -d ' ')
+  want_num=$(cat $ROOT/examples/m0-spine.lines | tr -d ' \n')
+  want_flo=$(cat $ROOT/dev/floor-corpus.lines | tr -d ' \n')
+  if [[ $num_lines != $want_num || $flo_lines != $want_flo ]]; then
+    print -r -- "floor sidecar detail=lines have=$num_lines/$flo_lines want=$want_num/$want_flo"
+    print -r -- "GATE-FAIL floor sidecar missing"
+    print -r -- "FAIL FLOOR"
+    return 1
+  fi
+  num_sha=$(awk '{ print $1 }' $ROOT/examples/m0-spine.sha256)
+  flo_sha=$(cat $FLOOR_PATHS | shasum -a 256 | awk '{ print $1 }')
+
+  local num_kloc flo_kloc sized
+  num_kloc=$(awk -v n="$num_lines" 'BEGIN { printf "%.3f\n", n / 1000 }')
+  flo_kloc=$(awk -v n="$flo_lines" 'BEGIN { printf "%.3f\n", n / 1000 }')
+  sized=$(awk -v a="$num_kloc" -v b="$flo_kloc" 'BEGIN { print (b > 2 * a || b < a / 2) ? "no" : "yes" }')
+  if [[ $sized != "yes" ]]; then
+    print -r -- "GATE-FAIL floor size num_kloc=$num_kloc flo_kloc=$flo_kloc"
+    print -r -- "FAIL FLOOR"
+    return 1
+  fi
+
+  out=$(zsh $ROOT/dev/pin-dune.sh dune build @all 2>&1)
+  code=$?
+  if [[ $code -ne 0 ]]; then
+    print -r -- "build exit=$code out=[$out]"
+    print -r -- "FAIL FLOOR"
+    return 1
+  fi
+
+  local block m1 m2 pipe flo l1 l2
+  block=$(floor_measure)
+  if [[ $? -ne 0 ]]; then
+    print -r -- "floor measure detail=[$block]"
+    print -r -- "FAIL FLOOR"
+    return 1
+  fi
+  local -a f
+  f=(${(s:|:)block})
+  m1=$f[1];  m2=$f[2];  pipe=$f[3];  flo=$f[4];  l1=$f[5];  l2=$f[6]
+  if [[ $m1 != $m2 ]]; then
+    block=$(floor_measure)
+    if [[ $? -ne 0 ]]; then
+      print -r -- "floor measure detail=[$block]"
+      print -r -- "FAIL FLOOR"
+      return 1
+    fi
+    f=(${(s:|:)block})
+    m1=$f[1];  m2=$f[2];  pipe=$f[3];  flo=$f[4];  l1=$f[5];  l2=$f[6]
+    if [[ $m1 != $m2 ]]; then
+      print -r -- "GATE-FAIL floor minute crossed twice"
+      print -r -- "FAIL FLOOR"
+      return 1
+    fi
+  fi
+
+  local pipe_per flo_per pass
+  pipe_per=$(awk -v m="$pipe" -v k="$num_kloc" 'BEGIN { printf "%.3f\n", (k + 0 > 0) ? m / k : 0 }')
+  flo_per=$(awk -v m="$flo" -v k="$flo_kloc" 'BEGIN { printf "%.3f\n", (k + 0 > 0) ? m / k : 0 }')
+  print -r -- "FLOOR pipeline_ms_per_kloc=$pipe_per floor_ms_per_kloc=$flo_per num_sha=$num_sha flo_sha=$flo_sha num_kloc=$num_kloc flo_kloc=$flo_kloc host=$(hostname) arch=$(uname -m) load_before=$l1 load_after=$l2 minute_before=$m1 minute_after=$m2"
+  print -r -- "DENOM-FROZEN kanon_serial=1641.599 kanon_parallel=712.803"
+  print -r -- "WASMGC-ONLY absent at M0"
+  pass=$(awk -v a="$pipe_per" -v b="$flo_per" 'BEGIN { print (a <= b) ? "yes" : "no" }')
+  if [[ $pass == "yes" ]]; then
+    print -r -- "GATE-OK"
+    print -r -- "PASS FLOOR"
+    return 0
+  fi
+  print -r -- "GATE-FAIL"
+  print -r -- "FAIL FLOOR"
+  return 1
+}
+
 # One leg alone, which is how the watchdog reaches a leg body.  A leg
 # body writes nothing under $WORK:  gate_timed alone writes the MEASURE
 # file, and gate_timed runs only in the battery below.  The work
@@ -289,7 +547,10 @@ if [[ $# -ge 2 && $1 == "--leg" ]]; then
     build) leg_build; exit $? ;;
     house) leg_house; exit $? ;;
     parse) leg_parse; exit $? ;;
+    check) leg_check; exit $? ;;
+    trusted-lines) leg_trusted_lines; exit $? ;;
     denominators) leg_denominators; exit $? ;;
+    floor) leg_floor; exit $? ;;
     *) print -r -- "gates: unknown leg $2"; exit 64 ;;
   esac
 fi
@@ -305,7 +566,7 @@ fail=0
 
 # Line 1 names the tree and line 2 carries the frozen kanon denominators.
 # Both figures come from the sidecar and neither is ever gated.
-print -r -- "GATES kite stage=A root=$ROOT"
+print -r -- "GATES kite stage=B root=$ROOT"
 print -r -- "KANON-DENOM serial_ms=$($PY -P -c 'import json, sys
 d = json.load(open(sys.argv[1]))
 print(d["kanon_ocamlopt_ms_per_kloc"])' $ROOT/dev/denominators.json) parallel_ms=$($PY -P -c 'import json, sys
@@ -346,11 +607,16 @@ leg () {
   return 1
 }
 
-# The four legs of the Stage A row, in the order of the brief 3.9.
+# The seven legs of the Stage B row, in the order of the brief 3.17
+# (D-B-28).  Every leg runs even when an earlier one failed, so one run
+# names every failing leg.
 leg MED BUILD SELF zsh $SELF --leg build
 leg FAST HOUSE SELF zsh $SELF --leg house
 leg MED PARSE SELF zsh $SELF --leg parse
+leg MED CHECK SELF zsh $SELF --leg check
+leg FAST TRUSTED-LINES SELF zsh $SELF --leg trusted-lines
 leg SLOW DENOMINATORS SELF zsh $SELF --leg denominators
+leg SUITE FLOOR SELF zsh $SELF --leg floor
 
 print -r -- ""
 cat $MEASURE_FILE

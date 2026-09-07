@@ -1,0 +1,10 @@
+id : vars=1 rvars=0 ( a0 -> a0 )
+add : vars=0 rvars=0 ( Int -> ( Int -> Int ) )
+two : vars=0 rvars=0 Int
+apply : vars=2 rvars=0 ( ( a0 -> a1 ) -> ( a0 -> a1 ) )
+three : vars=0 rvars=0 Int
+pick : vars=0 rvars=0 Int
+nest : vars=0 rvars=0 Int
+even : vars=0 rvars=0 ( Int -> Bool )
+odd : vars=0 rvars=0 ( Int -> Bool )
+call : vars=0 rvars=0 Bool

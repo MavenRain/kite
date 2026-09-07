@@ -69,3 +69,45 @@ are the rows of `dev/run-stage-A.sh`, reached as
   `PARSE files=23 ok=22 fail=1` and `FAIL PARSE`, exit 1.
 
 Four mutants, four killed, none survived.
+
+## Stage B
+
+Final command, run from the original checkout on 2026-09-06:
+`zsh /Users/oobi/Documents/kite/dev/run-stage-B.sh --mutants`.
+Every mutant uses its own copy below the runner's unique scratch
+directory.  Each edit was verified and each mutant compiled at exit 0
+with no compiler output.  Every intended test then failed at exit 1.
+The runner exited 0 with `STAGE-B-MUTANTS failures=0` and removed its
+scratch directory.  Six mutants were killed;  none survived.
+
+| Id | Exact edit | Command in the copy | Killing input | Evidence | Result |
+| --- | --- | --- | --- | --- | --- |
+| SB-M1 | In infer.ml, replace `let* () = check_uses e s p in` with `let* () = Ok () in`. | `zsh dev/gates.sh --leg check` | `test/neg/check-affine.kite` | `CHECK-FAIL .../check-affine.kite the file checks clean and the golden names Affine`, then `FAIL CHECK`. | KILLED |
+| SB-M2 | In unify.ml, replace `Types.RVar v -> v.rid = id` with `Types.RVar _v -> false`. | `zsh dev/gates.sh --leg check` | `test/regress.ml`, `row-occurs` | `REGRESS-FAIL row-occurs`, then `REGRESS tests=27 ok=26 fail=1` and `FAIL CHECK`. | KILLED |
+| SB-M3 | In row.ml, replace the first-occurrence predicate with the last-occurrence scan below. | `zsh dev/gates.sh --leg check` | `test/pos/scoped.kite`, `through_fun` | `CHECK-FAIL .../scoped.kite the printed scheme differs from the golden`, with `through_fun` inferred as Str instead of Int, then `FAIL CHECK`. | KILLED |
+| SB-M4 | In infer.ml, replace `let close = is_value v in` with `let close = true in`. | `zsh dev/gates.sh --leg check` | `test/pos/value-restriction.kite` | `CHECK-FAIL .../value-restriction.kite the printed scheme differs from the golden`, with nonval quantified instead of weak, then `FAIL CHECK`. | KILLED |
+| SB-M5 | In iface.ml, replace the budget-row arm and its parse/append body with `\| () when String.equal (peek ts) "budget" -> Ok acc`. | `_build/default/test/iface.exe test/pos/budget-ok.kite` | `test/pos/budget-ok.kite` | `IFACE-FAIL .../budget-ok.kite the read interface differs`, then `IFACE files=1 ok=0 fail=1`. | KILLED |
+| SB-M6 | Remove `examples/m0-spine.sha256`. | `zsh dev/gates.sh --leg floor` | Spine sidecar | `GATE-FAIL floor sidecar missing`, then `FAIL FLOOR`, with no `GATE-OK`. | KILLED |
+
+SB-M3 replaces `let hit = same && seen = want in` with:
+
+```ocaml
+let rec later (tail : Types.row) : bool =
+  match Subst.resolve_row st tail with
+  | Types.REmpty -> false
+  | Types.RVar _tail -> false
+  | Types.RExt (next, _occ, _ty, more) ->
+    Label.equal l next || later more in
+let hit = same && seen >= want && not (later rest) in
+```
+
+The first attempt at SB-M3 only skipped the next occurrence.  Replacing
+it with the actual last-occurrence behavior showed that the original
+scoped fixture missed this defect.  The fixture now passes its duplicate
+record through a selector function, and the final mutant changes that
+result from Int to Str.  The parser corpus still contains 46 files.
+
+The original positive row fixture also missed the direct row occurs
+check.  SB-M2 therefore uses the explicit cyclic-row regression in
+CHECK.  Its failure names the missed occurs check;  a compile error or
+an unrelated test failure cannot count as a kill.

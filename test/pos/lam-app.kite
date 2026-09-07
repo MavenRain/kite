@@ -1,0 +1,12 @@
+(* One and two parameter lambdas, application of two and of three
+   atoms, an if, a nested let and a recursive group. *)
+let id = fun x -> x
+let add = fun x y -> x + y
+let two = add 1 2
+let apply = fun f x -> f x
+let three = apply id 3
+let pick = if true then 1 else 2
+let nest = let y = 2 in y + 1
+let rec even = fun n -> if n == 0 then true else odd (n - 1)
+and odd = fun n -> if n == 0 then false else even (n - 1)
+let call = even 4

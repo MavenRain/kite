@@ -1,0 +1,4 @@
+(* The AFFINE twin:  an at most once binder used two times. *)
+let once = (fun x -> x + 1 : Int -1> Int)
+let first = once 1
+let second = once 2

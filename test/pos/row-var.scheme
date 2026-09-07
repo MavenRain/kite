@@ -1,0 +1,3 @@
+get_a : vars=1 rvars=1 ( { a ^ 0 : a0 | b0 } -> a0 )
+one : vars=0 rvars=0 Int
+two : vars=0 rvars=0 Str

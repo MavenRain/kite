@@ -1,0 +1,14 @@
+(* A protocol of two states with a compensation, and a role that answers
+   every leg and names both the Peer_lost and the abort arm (A4). *)
+let undo = 0
+let redo = 1
+protocol Two {
+  state Start { go : Int -> Next } compensate undo
+  state Next { done : Str -> Start } compensate redo
+}
+role Client : Two {
+  go a -> a,
+  done b -> b,
+  Peer_lost -> 0,
+  abort -> 1
+}

@@ -1,0 +1,4 @@
+(* A manifest of two entries and a freeze of one label (D-A-10). *)
+let handler = fun x -> x
+freeze { store } = handler
+manifest M { pod p { image = "a" , replicas = 3 } , service s { port = 1 } }

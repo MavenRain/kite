@@ -1,0 +1,5 @@
+base : vars=0 rvars=0 { a ^ 0 : Int , b ^ 0 : Str }
+ext : vars=0 rvars=0 { c ^ 0 : Bool , a ^ 0 : Int , b ^ 0 : Str }
+smaller : vars=0 rvars=0 { a ^ 0 : Int , b ^ 0 : Str }
+taken : vars=0 rvars=0 Int
+annotated : vars=0 rvars=0 { a ^ 0 : Int }

@@ -1,0 +1,2 @@
+guarded : vars=0 rvars=0 ( Int -> ( Int -> Int ) )
+used : vars=0 rvars=0 Int

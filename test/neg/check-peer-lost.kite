@@ -1,0 +1,12 @@
+(* A role with no Peer_lost arm (A4, D-B-11).  The abort arm is present
+   and is never the checked one. *)
+let undo = 0
+protocol Two {
+  state Start { go : Int -> Next } compensate undo
+  state Next { done : Str -> Start } compensate undo
+}
+role Client : Two {
+  go a -> a,
+  done b -> b,
+  abort -> 1
+}

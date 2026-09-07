@@ -1,0 +1,4 @@
+(* An import declaration with its cost and its deadline, and a use of
+   the imported name (D-A-9). *)
+import fetch : Int -> Str cost 3 deadline 5
+let text = fetch 1

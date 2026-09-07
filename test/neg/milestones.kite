@@ -1,0 +1,9 @@
+(* A later milestone declaration and the code type, both refused with
+   NotYet at M0 (D-A-11).  The file names one form of each milestone,
+   M1 to M4.  The checker stops at the first failing declaration, so
+   test/regress.ml holds one case per form and reads the printed line. *)
+node n_a
+service s_a
+proof p_a
+fuel f_a
+let staged = (q : Code [ a : Int , Int ])
