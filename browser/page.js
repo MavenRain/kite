@@ -38,6 +38,11 @@ globalThis.kite = {
 const parameters = new URLSearchParams(location.search);
 const cluster = parameters.get('cluster') || 'demo';
 const nodeId = parameters.get('node') || crypto.randomUUID();
+const workloads = KiteWorkloads.create(KiteGlue, {cluster, nodeId,
+  visibility: () => document.hidden ? 'hidden' : 'visible'});
+kite.load = (artifact, host) => workloads.ok
+  ? workloads.value.start(artifact, host) : Promise.resolve(workloads);
+kite.workloads = workloads.ok ? workloads.value : undefined;
 const status = document.getElementById('status');
 async function update(version = pollingGeneration) {
   if (stopped || controlError || version !== pollingGeneration) return;
@@ -57,21 +62,30 @@ document.getElementById('apply').onclick = async () => {
 };
 for (const op of ['freeze', 'resume']) {
   document.getElementById(op).onclick = async () => {
-    const result = await kite.request(op);
+    const result = await lifecycle(op);
     status.textContent = result.ok ? `Node ${op} complete.` : result.error;
   };
 }
-document.addEventListener('freeze', () => kite.request('freeze'));
-document.addEventListener('resume', () => kite.request('resume'));
+async function lifecycle(op) {
+  const results = await Promise.all([kite.request(op),
+    workloads.ok ? workloads.value[op]() : workloads]);
+  return results.find(result => !result.ok) || {ok: true};
+}
+document.addEventListener('visibilitychange', () => {
+  if (workloads.ok) workloads.value.observe();
+});
+document.addEventListener('freeze', () => lifecycle('freeze'));
+document.addEventListener('resume', () => lifecycle('resume'));
 addEventListener('pagehide', event => {
   stopped = true;
   pollingGeneration += 1;
   clearTimeout(updateTimer);
-  kite.request(event.persisted ? 'freeze' : 'close');
+  lifecycle(event.persisted ? 'freeze' : 'close');
 });
 addEventListener('pageshow', event => {
   if (!event.persisted) return;
   stopped = false;
+  if (workloads.ok) workloads.value.resume();
   kite.request('resume').then(result => {
     if (!result.ok) status.textContent = result.error;
     else update();

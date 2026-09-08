@@ -1,0 +1,61 @@
+M2-MUTATION baseline-build targets=feed,service,volume,taint,manifest
+RUNTIME suite=feed tests=22 ok=22 fail=0
+RUNTIME suite=service tests=23 ok=23 fail=0
+RUNTIME suite=volume tests=33 ok=33 fail=0
+RUNTIME suite=taint tests=25 ok=25 fail=0
+RUNTIME suite=manifest tests=20 ok=20 fail=0
+M2-MUTATION-BASELINE hidden-tolerance-bypass suite=taint case=hidden-starts-require-tolerance tests=1 ok=1
+M2-MUTATION-BASELINE existing-start-restriction-widened suite=taint case=restricted-config-disjoint-intersection tests=1 ok=1
+M2-MUTATION-BASELINE restricted-name-check-bypass suite=taint case=restricted-config-invalid-name-refused tests=1 ok=1
+M2-MUTATION-BASELINE restricted-duplicate-check-bypass suite=taint case=restricted-config-duplicate-name-refused tests=1 ok=1
+M2-MUTATION-BASELINE feed-gap-bypass suite=feed case=gap-does-not-advance tests=1 ok=1
+M2-MUTATION-BASELINE doorbell-advances-cursor suite=feed case=notifications-are-only-hints tests=1 ok=1
+M2-MUTATION-BASELINE historical-feed-head-forgotten suite=feed case=pending-head-boundaries-survive-newer-snapshots tests=1 ok=1
+M2-MUTATION-BASELINE head-epoch-stale-fence-removed suite=feed case=stale-head-epoch-refused tests=1 ok=1
+M2-MUTATION-BASELINE feed-counter-bound-doubled suite=feed case=bounded-counters tests=1 ok=1
+M2-MUTATION-BASELINE feed-entry-sequence-upper-bound-removed suite=feed case=bounded-counters tests=1 ok=1
+M2-MUTATION-BASELINE service-stale-epoch-bypass suite=service case=stale-epoch-refused tests=1 ok=1
+M2-MUTATION-BASELINE service-stale-session-bypass suite=service case=new-session-resets-sequence tests=1 ok=1
+M2-MUTATION-BASELINE service-generation-incarnation-bypass suite=service case=restart-incarnation-fences-old-session tests=1 ok=1
+M2-MUTATION-BASELINE volume-generation-bypass suite=volume case=same_epoch_handoff tests=1 ok=1
+M2-MUTATION-BASELINE lock-grant-epoch-fence-removed suite=volume case=lock_grant_epoch_mismatch tests=1 ok=1
+M2-MUTATION-BASELINE claim-receipt-pairing-bypass suite=volume case=crossed_claim_receipt_refused tests=1 ok=1
+M2-MUTATION-BASELINE live-node-admission-bypass suite=manifest case=no-live-node-denied tests=1 ok=1
+M2-MUTATION-BASELINE manifest-replicas-reports-bound suite=manifest case=valid-replica-bound tests=1 ok=1
+M2-MUTATION build=hidden-tolerance-bypass
+M2-MUTATION-KILLED hidden-tolerance-bypass suite=taint case=hidden-starts-require-tolerance build=0 test=1
+M2-MUTATION build=existing-start-restriction-widened
+M2-MUTATION-KILLED existing-start-restriction-widened suite=taint case=restricted-config-disjoint-intersection build=0 test=1
+M2-MUTATION build=restricted-name-check-bypass
+M2-MUTATION-KILLED restricted-name-check-bypass suite=taint case=restricted-config-invalid-name-refused build=0 test=1
+M2-MUTATION build=restricted-duplicate-check-bypass
+M2-MUTATION-KILLED restricted-duplicate-check-bypass suite=taint case=restricted-config-duplicate-name-refused build=0 test=1
+M2-MUTATION build=feed-gap-bypass
+M2-MUTATION-KILLED feed-gap-bypass suite=feed case=gap-does-not-advance build=0 test=1
+M2-MUTATION build=doorbell-advances-cursor
+M2-MUTATION-KILLED doorbell-advances-cursor suite=feed case=notifications-are-only-hints build=0 test=1
+M2-MUTATION build=historical-feed-head-forgotten
+M2-MUTATION-KILLED historical-feed-head-forgotten suite=feed case=pending-head-boundaries-survive-newer-snapshots build=0 test=1
+M2-MUTATION build=head-epoch-stale-fence-removed
+M2-MUTATION-KILLED head-epoch-stale-fence-removed suite=feed case=stale-head-epoch-refused build=0 test=1
+M2-MUTATION build=feed-counter-bound-doubled
+M2-MUTATION-KILLED feed-counter-bound-doubled suite=feed case=bounded-counters build=0 test=1
+M2-MUTATION build=feed-entry-sequence-upper-bound-removed
+M2-MUTATION-KILLED feed-entry-sequence-upper-bound-removed suite=feed case=bounded-counters build=0 test=1
+M2-MUTATION build=service-stale-epoch-bypass
+M2-MUTATION-KILLED service-stale-epoch-bypass suite=service case=stale-epoch-refused build=0 test=1
+M2-MUTATION build=service-stale-session-bypass
+M2-MUTATION-KILLED service-stale-session-bypass suite=service case=new-session-resets-sequence build=0 test=1
+M2-MUTATION build=service-generation-incarnation-bypass
+M2-MUTATION-KILLED service-generation-incarnation-bypass suite=service case=restart-incarnation-fences-old-session build=0 test=1
+M2-MUTATION build=volume-generation-bypass
+M2-MUTATION-KILLED volume-generation-bypass suite=volume case=same_epoch_handoff build=0 test=1
+M2-MUTATION build=lock-grant-epoch-fence-removed
+M2-MUTATION-KILLED lock-grant-epoch-fence-removed suite=volume case=lock_grant_epoch_mismatch build=0 test=1
+M2-MUTATION build=claim-receipt-pairing-bypass
+M2-MUTATION-KILLED claim-receipt-pairing-bypass suite=volume case=crossed_claim_receipt_refused build=0 test=1
+M2-MUTATION build=live-node-admission-bypass
+M2-MUTATION-KILLED live-node-admission-bypass suite=manifest case=no-live-node-denied build=0 test=1
+M2-MUTATION build=manifest-replicas-reports-bound
+M2-MUTATION-KILLED manifest-replicas-reports-bound suite=manifest case=valid-replica-bound build=0 test=1
+M2-MUTATIONS tests=18 killed=18 survived=0 unbuildable=0

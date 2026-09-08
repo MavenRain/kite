@@ -135,7 +135,7 @@ hits_state_browser () {
   local out
   out=$(hits $pat_state $root/browser)
   print -r -- "$out" | rg -v \
-    '/browser/(model|program).ml:[0-9]+:[[:space:]]*(traverse parser \(Array.to_list \(Js.to_array \(J.coerce value\)\)\)|J.inject \(Js.array \(Array.of_list \(List.map render values\)\)\))$'
+    '/browser/(model|program|durable_model).ml:[0-9]+:[[:space:]]*(traverse parser \(Array.to_list \(Js.to_array \(J.coerce value\)\)\)|J.inject \(Js.array \(Array.of_list \(List.map render values\)\)\))$'
 }
 leg3=$(hits $pat_state $core_dirs; hits_state_test $test_dirs $bin_dirs; hits_state_browser)
 report_empty "no-mutable-state" "$leg3"

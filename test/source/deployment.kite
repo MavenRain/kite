@@ -1,0 +1,5 @@
+let wanted = 1 + 1
+manifest Workloads {
+  Deployment web { replicas = wanted, bound = 3, tolerate_hidden = false }
+}
+let result = "deployment"

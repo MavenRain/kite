@@ -1,0 +1,11 @@
+import host_checkpoint : Str -> Unit cost 1 deadline 1000
+import host_probe : Str -> Unit cost 1 deadline 1000
+let captured = "retained"
+let startup = host_probe "startup"
+manifest Workloads {
+  StatefulSet data { replicas = 1, bound = 2, tolerate_hidden = true },
+  FreezeDrain shutdown { target = "data" }
+}
+freeze { store } = let observed = host_probe captured in host_checkpoint "data"
+let captured = "shadowed"
+let result = "drain"

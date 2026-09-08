@@ -1,8 +1,9 @@
 (* The checked IR machine returns persistent states and explicit host calls. *)
+module Manifest = Kite_runtime.Manifest
 type error = Unbound of string | Expected of string | Pattern_failed
   | Missing_field of string | Division_by_zero | Integer_range
   | Unknown_operator of string | Uncomparable | Unsupported_host_type
-  | Host_failed of string
+  | Host_failed of string | Manifest_schema of string | Manifest_failed of Manifest.error
 type contract = Atom of string | Fields of (string * contract) list
   | Choice of (string * contract) list
 type imported = { name : string; argument : contract; result : contract;
@@ -13,9 +14,16 @@ type value = Lit of Literal.t | Record of (Label.t * value) list
   | Recursive of Ident.t * (Ident.t * Ir.t) list * environment
   | Host of imported
 and environment = (Ident.t * value) list
+type manifest = { manifest_kind : string; manifest_name : string;
+                  manifest_fields : (Label.t * Ir.t) list }
 type item = Binding of Ir.item | Import of imported | Deferred of Ir.item
+  | Manifest of manifest
+(** A completed startup environment and validated manifest descriptions.
+    Deferred closures retain the lexical scope at their declarations. *)
+type session = { environment : environment; manifests : Manifest.t list }
 type outcome = Done of value | Failed of error | Continue of (unit -> outcome)
   | Call of imported * value * ((value, error) result -> outcome)
+  | Ready of session * value
 let ( let* ) = Result.bind
 let error_text = function
   | Unbound name -> "unbound: " ^ name
@@ -28,6 +36,14 @@ let error_text = function
   | Uncomparable -> "uncomparable_function"
   | Unsupported_host_type -> "unsupported_host_type"
   | Host_failed name -> "host_failed: " ^ name
+  | Manifest_schema name -> "manifest_schema: " ^ name
+  | Manifest_failed failure -> "manifest_failed: " ^ (match failure with
+      | Manifest.Invalid_name -> "invalid_name"
+      | Manifest.Invalid_bound -> "invalid_bound"
+      | Manifest.Invalid_replicas -> "invalid_replicas"
+      | Manifest.Not_a_workload -> "not_a_workload"
+      | Manifest.Admit_denied Manifest.No_eligible_nodes -> "admit_denied"
+      | Manifest.Scheduling_error _ -> "scheduling_error")
 let rec value_text = function
   | Lit (Literal.Int n) -> string_of_int n
   | Lit (Literal.Str s) -> "\"" ^ String.escaped s ^ "\""
@@ -103,6 +119,32 @@ let fields = function
   | Lit _ | Variant _ | Closure _ | Recursive _ | Host _ -> Error (Expected "record")
 let int_value n = Lit (Literal.Int n)
 let bool_value b = Lit (Literal.Bool b)
+let manifest_schema kind fields =
+  let wanted = match kind with
+    | "deployment" | "stateful_set" -> Some ["bound"; "replicas"; "tolerate_hidden"]
+    | "service" | "drain" -> Some ["target"]
+    | _unknown_kind -> None in
+  Option.fold ~none:(Error (Manifest_schema "kind")) ~some:(fun wanted ->
+    if List.sort String.compare fields = wanted then Ok ()
+    else Error (Manifest_schema "fields")) wanted
+let manifest_value description values =
+  let get parse name = Option.fold ~none:(Error (Manifest_schema "fields"))
+      ~some:parse (field (Label.of_string name) 0 values) in
+  let* () = manifest_schema description.manifest_kind
+      (List.map (fun (label, _value) -> Label.to_string label) values) in
+  match description.manifest_kind with
+  | "deployment" | "stateful_set" ->
+    let* replicas = get integer "replicas" in let* bound = get integer "bound" in
+    let* tolerate_hidden = get boolean "tolerate_hidden" in
+    Result.map_error (fun error -> Manifest_failed error)
+      ((if String.equal description.manifest_kind "deployment" then Manifest.deployment
+        else Manifest.stateful_set) ~name:description.manifest_name ~replicas ~bound ~tolerate_hidden)
+  | "service" | "drain" ->
+    let* target = get string "target" in
+    Result.map_error (fun error -> Manifest_failed error)
+      ((if String.equal description.manifest_kind "service" then Manifest.service
+        else Manifest.drain) ~name:description.manifest_name ~target)
+  | _unknown_kind -> Error (Manifest_schema "kind")
 let i32 operation a b = Int32.to_int (operation (Int32.of_int a) (Int32.of_int b))
 let in_range n = Int64.of_int n >= -2147483648L && Int64.of_int n <= 2147483647L
 let rec equal a b =
@@ -268,28 +310,49 @@ and match_arms env value arms next =
   | (pat, body) :: rest ->
     Option.fold ~none:(Continue (fun () -> match_arms env value rest next))
       ~some:(fun names -> expression (List.append names env) body next) (pattern pat value)
-let rec items env last program finish =
+let rec items env manifests last program finish =
   match program with
-  | [] -> finish env last
+  | [] -> finish {environment = env; manifests = List.rev manifests} last
   | Binding binding :: rest -> expression env binding.Ir.ibody (fun value ->
-      items ((binding.Ir.iname, value) :: env) value rest finish)
+      items ((binding.Ir.iname, value) :: env) manifests value rest finish)
   | Import imported :: rest -> Continue (fun () ->
-      items ((Ident.of_string imported.name, Host imported) :: env) last rest finish)
+      items ((Ident.of_string imported.name, Host imported) :: env) manifests last rest finish)
   | Deferred binding :: rest -> Continue (fun () ->
-      items ((binding.Ir.iname, Closure (Ir.PWild, binding.Ir.ibody, env)) :: env) last rest finish)
-let start program = items [] (Lit Literal.Unit) program (fun _env value -> Done value)
-let invoke program name argument = items [] (Lit Literal.Unit) program (fun env _last ->
+      items ((binding.Ir.iname, Closure (Ir.PWild, binding.Ir.ibody, env)) :: env) manifests last rest finish)
+  | Manifest description :: rest ->
+    deliver (manifest_schema description.manifest_kind
+      (List.map (fun (label, _body) -> Label.to_string label) description.manifest_fields)) (fun () ->
+      entries_eval env description.manifest_fields [] (fun values ->
+        deliver (manifest_value description values) (fun manifest ->
+          if List.exists (fun previous -> String.equal (Manifest.name previous) (Manifest.name manifest)) manifests
+          then Failed (Manifest_schema "duplicate_name")
+          else items env (manifest :: manifests) last rest finish)))
+(** Evaluate startup once, then pass its retained environment and last value
+    to [finish]. Host calls and cooperative suspension remain explicit. *)
+let start_session program finish = items [] [] (Lit Literal.Unit) program finish
+let start program = start_session program (fun _session value -> Done value)
+(** End successful startup with [Ready], preserving the session for a host
+    that owns invocation ordering and continuation lifetime. *)
+let open_session program = start_session program (fun session value -> Ready (session, value))
+(** Invoke a binding in an existing session without evaluating startup again.
+    A missing binding returns [Unbound]; application uses the usual evaluator. *)
+let invoke_session session name argument =
     Option.fold ~none:(Failed (Unbound name))
       ~some:(fun fn -> apply fn argument (fun value -> Done value))
-      (lookup (Ident.of_string name) env))
+      (lookup (Ident.of_string name) session.environment)
+(** Evaluate startup and then invoke a binding. Lifecycle hosts should retain
+    a session and use [invoke_session] to avoid repeating startup effects. *)
+let invoke program name argument = start_session program (fun session _last ->
+    invoke_session session name argument)
 let rec advance count outcome =
   if count <= 0 then outcome else
     match outcome with
     | Continue resume -> advance (count - 1) (resume ())
-    | Done _ | Failed _ | Call _ -> outcome
+    | Done _ | Failed _ | Call _ | Ready _ -> outcome
 let rec native outcome =
   match outcome with
   | Continue resume -> native (resume ())
   | Done value -> Ok value
+  | Ready (_session, value) -> Ok value
   | Failed error -> Error error
   | Call (imported, _argument, _resume) -> Error (Host_failed ("unavailable: " ^ imported.name))

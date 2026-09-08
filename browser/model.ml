@@ -2,8 +2,12 @@
    preserve ticket history without exposing or reconstructing its internals. *)
 open Js_of_ocaml
 
+let () = Durable_model.install ()
+
 module K = Kite_runtime.Kubelet
 module C = Kite_runtime.Cluster
+module M = Kite_runtime.Manifest
+module T = Kite_runtime.Taint
 module J = Js.Unsafe
 
 let ( let* ) = Result.bind
@@ -238,6 +242,52 @@ let plan snapshot epoch desired timeout max_pods =
     ~ok:(fun commands -> J.obj [| "ok", boolean true;
                                 "commands", js_list render_command commands |]) outcome
 
+let manifest_error = function
+  | M.Invalid_name -> "invalid_manifest_name"
+  | M.Invalid_bound -> "invalid_manifest_bound"
+  | M.Invalid_replicas -> "invalid_manifest_replicas"
+  | M.Not_a_workload -> "not_a_workload"
+  | M.Admit_denied M.No_eligible_nodes -> "Admit_denied:no_eligible_nodes"
+  | M.Scheduling_error _detail -> "invalid_admission_snapshot"
+
+let read_workload value =
+  let* value = read_object "manifest" value in
+  let* kind = field read_string value "kind" in
+  let* name = field read_string value "name" in
+  let* replicas = field read_int value "replicas" in
+  let* bound = field read_int value "bound" in
+  let* tolerate_hidden = field read_bool value "tolerateHidden" in
+  let construct = match kind with
+    | "deployment" -> Ok M.deployment
+    | "stateful_set" -> Ok M.stateful_set
+    | unknown -> invalid ("workload_kind: " ^ unknown) in
+  let* construct = construct in
+  Result.map_error manifest_error (construct ~name ~replicas ~bound ~tolerate_hidden)
+
+let read_observation value =
+  let* value = read_object "observation" value in
+  let* node_id = field read_string value "nodeId" in
+  let* incarnation = field read_int value "incarnation" in
+  let* visibility = field read_string value "visibility" in
+  let* visibility = match visibility with
+    | "visible" -> Ok T.Visible
+    | "hidden" -> Ok T.Hidden
+    | unknown -> invalid ("visibility: " ^ unknown) in
+  Ok { T.node_id; incarnation; visibility }
+
+let manifest_plan manifest snapshot observations =
+  let outcome =
+    let* manifest = read_workload manifest in
+    let* snapshot = read_snapshot snapshot in
+    let* observations = read_list read_observation "observations" observations in
+    let* config = Result.map_error cluster_error (C.config ~timeout:5 ~max_pods:64) in
+    let* plan = Result.map_error manifest_error
+        (M.admit config ~epoch:snapshot.epoch ~observations snapshot manifest) in
+    Result.map_error cluster_error (C.authorize ~current_epoch:snapshot.epoch plan) in
+  Result.fold ~error:failure
+    ~ok:(fun commands -> J.obj [| "ok", boolean true;
+                                "commands", js_list render_command commands |]) outcome
+
 let () =
   Js.export "KiteModel"
     (J.obj [| "create", J.inject (Js.Unsafe.callback create);
@@ -245,4 +295,9 @@ let () =
                 invoke state "step" event));
               "view", J.inject (Js.Unsafe.callback (fun state ->
                 invoke state "view" (J.inject Js.undefined)));
-              "plan", J.inject (Js.Unsafe.callback plan) |])
+              "plan", J.inject (Js.Unsafe.callback plan);
+              "manifestPlan", J.inject (Js.Unsafe.callback manifest_plan);
+              "validateWorkload", J.inject (Js.Unsafe.callback (fun value ->
+                Result.fold ~error:failure
+                  ~ok:(fun _manifest -> J.obj [| "ok", boolean true |])
+                  (read_workload value))) |])

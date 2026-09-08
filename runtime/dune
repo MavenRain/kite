@@ -6,7 +6,7 @@
 (library
  (name kite_execution)
  (modules eval)
- (libraries kite_core)
+ (libraries kite_core kite_runtime)
  (flags (:standard -warn-error +a)))
 
 (library

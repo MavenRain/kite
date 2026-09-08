@@ -1,0 +1,5 @@
+manifest Workloads {
+  Deployment web { replicas = 1, bound = 2, tolerate_hidden = true },
+  Service api { target = "web" }
+}
+let result = "service"

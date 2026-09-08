@@ -135,6 +135,12 @@ let item input =
   | () when String.equal tag "deferred" ->
     let* name = ident value "name" in let* body = field (expression 0) value "body" in
     Ok (E.Deferred {Ir.iname = name; ibody = body})
+  | () when String.equal tag "manifest" ->
+    let* manifest_kind = str value "kind" in let* manifest_name = str value "name" in
+    let* manifest_fields = field (read_list (record_field 0)) value "fields" in
+    let* () = Result.map_error E.error_text (E.manifest_schema manifest_kind
+      (List.map (fun (label, _body) -> Label.to_string label) manifest_fields)) in
+    Ok (E.Manifest {E.manifest_kind; manifest_name; manifest_fields})
   | () when String.equal tag "import" ->
     let* name = str value "name" in let* argument = field (contract 0) value "argument" in
     let* result = field (contract 0) value "result" in let* deadline_ms = integer value "deadlineMs" in
@@ -191,9 +197,29 @@ let rec data contract input =
     let* payload = pick (Label.occ_to_int index) alternatives in
     Ok (E.Variant (Label.of_string name, index, payload))
 let error message = J.obj [|"kind", text "error"; "error", text message|]
+let manifest value =
+  let workload kind (value : E.Manifest.workload) = J.obj [|"kind", text kind; "name", text value.name;
+      "replicas", number value.replicas; "bound", number value.bound;
+      "tolerateHidden", J.inject (Js.bool value.tolerate_hidden)|] in
+  let binding kind (value : E.Manifest.binding) = J.obj [|"kind", text kind; "name", text value.name;
+      "target", text value.target|] in
+  match value with
+  | E.Manifest.Deployment value -> workload "deployment" value
+  | E.Manifest.Stateful_set value -> workload "stateful_set" value
+  | E.Manifest.Named_service value -> binding "service" value
+  | E.Manifest.Freeze_drain value -> binding "drain" value
 let rec outcome state =
   match E.advance 1000 state with
   | E.Done value -> J.obj [|"kind", text "done"; "value", render value|]
+  | E.Ready (session, value) ->
+    let freeze () =
+      let state = Option.fold ~none:(E.Done (E.Lit Literal.Unit))
+          ~some:(fun fn -> E.apply fn (E.Lit Literal.Unit) (fun value -> E.Done value))
+          (E.lookup (Ident.of_string "@freeze") session.E.environment) in
+      outcome state in
+    J.obj [|"kind", text "done"; "value", render value;
+      "manifests", js_list manifest session.E.manifests;
+      "session", J.obj [|"freeze", J.inject (Js.wrap_callback freeze)|]|]
   | E.Failed failure -> error (E.error_text failure)
   | E.Continue resume -> J.obj [|"kind", text "yield";
       "resume", J.inject (Js.wrap_callback (fun () -> outcome (resume ())))|]
@@ -208,4 +234,7 @@ let rec outcome state =
       "argument", render argument; "deadlineMs", number imported.E.deadline_ms;
       "resume", J.inject (Js.wrap_callback answer)|]
 let start artifact = Result.fold ~error ~ok:(fun program -> outcome (E.start program)) (program artifact)
-let () = Js.export "KiteProgram" (J.obj [|"start", J.inject (Js.wrap_callback start)|])
+let open_session artifact = Result.fold ~error
+    ~ok:(fun program -> outcome (E.open_session program)) (program artifact)
+let () = Js.export "KiteProgram" (J.obj [|"start", J.inject (Js.wrap_callback start);
+    "openSession", J.inject (Js.wrap_callback open_session)|])

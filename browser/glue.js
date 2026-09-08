@@ -5,6 +5,7 @@
   const cap = 1000000000;
   const ok = value => ({ ok: true, value });
   const fail = error => ({ ok: false, error });
+  const leases = new WeakMap();
   const errorName = error => error && (error.name || error.message) || "browser_error";
   const integer = value => Number.isSafeInteger(value) && value >= 0 && value <= cap;
   const stateValid = state => state && integer(state.epoch) && integer(state.seq)
@@ -67,10 +68,13 @@
           }
           let release;
           const held = new Promise(done => { release = done; });
-          deliver(ok({ release() {
+          const lease = { release() {
+            leases.delete(lease);
             release();
             return settled;
-          } }));
+          } };
+          leases.set(lease, name);
+          deliver(ok(lease));
           return held;
         });
         settled = Promise.resolve(request).then(() => ok(undefined), error => {
@@ -94,15 +98,15 @@
     }
   }
   function store(db) {
-    function transact(mode, action) {
-      return new Promise(resolve => {
+    function transact(mode, action, names = ["meta", "log"]) {
+      let cancel = () => fail("transaction_unavailable");
+      const pending = new Promise(resolve => {
         let tx;
         let value;
         let failure;
         function abort(reason) {
           failure = failure || reason;
-          const aborted = boundary(() => tx.abort());
-          if (!aborted.ok) resolve(fail(failure));
+          return boundary(() => tx.abort());
         }
         const guarded = callback => () => {
           try {
@@ -112,7 +116,8 @@
           }
         };
         try {
-          tx = db.transaction(["meta", "log"], mode);
+          tx = db.transaction(names, mode);
+          cancel = () => boundary(() => tx.abort());
           tx.oncomplete = () => resolve(failure ? fail(failure) : ok(value));
           tx.onabort = () => resolve(fail(failure || errorName(tx.error)));
           tx.onerror = event => {
@@ -124,6 +129,35 @@
           else resolve(fail(errorName(error)));
         }
       });
+      pending.abort = () => cancel();
+      return pending;
+    }
+    function atomic({ mode = "readwrite", reads, lease, plan }) {
+      const held = () => !lease || leases.get(lease.value) === lease.name;
+      if (!held()) return Promise.resolve(fail("lock_denied"));
+      return transact(mode, (tx, finish, abort, guarded) => {
+        const snapshot = {};
+        let remaining = reads.length;
+        for (const read of reads) {
+          const object = tx.objectStore(read.store);
+          const request = read.all ? object.getAll() : object.get(read.key);
+          request.onsuccess = guarded(() => {
+            snapshot[read.as] = request.result;
+            remaining -= 1;
+            if (remaining !== 0) return;
+            if (!held()) { abort("lock_denied"); return; }
+            const outcome = plan(snapshot);
+            if (!outcome.ok) { abort(outcome.error); return; }
+            for (const write of outcome.value.writes || []) {
+              const target = tx.objectStore(write.store);
+              if (write.add) target.add(write.value);
+              else target.put(write.value, write.key);
+            }
+            finish(outcome.value.receipt);
+          });
+        }
+        if (remaining === 0) abort("empty_transaction");
+      }, [...new Set(reads.map(read => read.store))]);
     }
     function read() {
       return transact("readonly", (tx, finish, abort, guarded) => {
@@ -176,7 +210,7 @@
       });
     }
     return {
-      read,
+      read, atomic,
       claim(expectedEpoch, owner) {
         if (typeof owner !== "string" || owner.length === 0) {
           return Promise.resolve(fail("invalid_owner"));
@@ -199,15 +233,18 @@
         }
       }
       try {
-        const request = root.indexedDB.open(name, 1);
+        const request = root.indexedDB.open(name, 2);
         request.onblocked = () => deliver(fail("open_blocked"));
         request.onerror = () => deliver(fail(errorName(request.error)));
         request.onupgradeneeded = () => {
           const upgraded = boundary(() => {
             const db = request.result;
-            const meta = db.createObjectStore("meta");
-            meta.put({ epoch: 0, seq: 0, owner: null }, "state");
-            db.createObjectStore("log", { keyPath: "seq" });
+            if (!db.objectStoreNames.contains("meta")) {
+              const meta = db.createObjectStore("meta");
+              meta.put({ epoch: 0, seq: 0, owner: null }, "state");
+              db.createObjectStore("log", { keyPath: "seq" });
+            }
+            if (!db.objectStoreNames.contains("volumes")) db.createObjectStore("volumes");
           });
           if (!upgraded.ok) {
             boundary(() => request.transaction.abort());
@@ -231,5 +268,18 @@
       }
     });
   }
-  root.KiteGlue = { send, spawn, kill, listen, lock, locks, open };
+  function doorbell(name, callback) {
+    return boundary(() => {
+      const channel = new root.BroadcastChannel(name);
+      channel.onmessage = event => callback(event.data);
+      return { ring: value => send(channel, value), close: () => boundary(() => channel.close()) };
+    });
+  }
+  function every(milliseconds, callback) {
+    return boundary(() => {
+      const timer = root.setInterval(callback, milliseconds);
+      return () => boundary(() => root.clearInterval(timer));
+    });
+  }
+  root.KiteGlue = { send, spawn, kill, listen, lock, locks, open, doorbell, every };
 })(globalThis);

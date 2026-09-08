@@ -47,7 +47,10 @@ timing gate, described in [the M1-C brief](dev/stage-M1-C-brief.md).
 M2-A adds native models for committed feeds, named services, fenced volume
 checkpoints, visibility taints and manifest admission. See
 [the M2-A brief](dev/stage-M2-A-brief.md) for contracts and validation, and
-[the M2 plan](dev/M2-PLAN.md) for source and browser integration still to come.
+[the M2 plan](dev/M2-PLAN.md) for the milestone acceptance matrix.
+M2-B binds those models to browser transactions and source manifests.
+[The M2-B brief](dev/stage-M2-B-brief.md) describes workload namespaces,
+regular checkpoints, durable services and retained source freeze handlers.
 
 After building, serve the repository with `python3 -m http.server 8000
 --bind 127.0.0.1` and open `http://127.0.0.1:8000/browser/index.html`
@@ -63,7 +66,12 @@ Build with `zsh dev/pin-dune.sh dune build @all`.  Then run
 file and an executable `PATH.kite.js` data artifact. `run PATH.kite`
 executes its pure expressions with the native evaluator. Browser host
 imports are handled by `KiteSource.run`, using the same evaluator compiled
-with js_of_ocaml. `iface A.kite` writes `A.coi`; `check --iface A.coi B.kite`
+with js_of_ocaml. On the demonstration page, `kite.load(KiteArtifact, host)`
+retains the evaluator session and installs its concrete workload manifests.
+The four source forms are `Deployment`, `StatefulSet`, `Service` and
+`FreezeDrain`; see [the source contracts](dev/stage-M2-B-source-contract.md)
+and `test/source/`. Their numeric bounds are validated at execution;
+indexed proofs remain M3. `iface A.kite` writes `A.coi`; `check --iface A.coi B.kite`
 checks a consumer with no need to read the provider source.  The other
 verbs are `fmt`, `roundtrip` and `version`.
 
@@ -79,9 +87,14 @@ This includes at least 306 seconds with both cluster tabs hidden.
 `node dev/drive.mjs --quick` runs the other five behaviors for development.
 General source-to-WasmGC emission remains later work.
 
+To retain a complete browser package, run
+`zsh dev/browser-pipeline.sh --output /tmp/kite-package test/source/deployment.kite`.
+The destination must not exist. The builder emits both browser bundles
+concurrently, checks both compiler results, and assembles the package.
+
 ## Gates
 
-M1-C runs the seven M0 legs plus RUNTIME, SOURCE, BROWSER and ACCEPTANCE,
+M2-B runs the seven M0 legs plus RUNTIME, DURABLE, SOURCE, BROWSER and ACCEPTANCE,
 through one command,
 `zsh dev/gates.sh`:
 
@@ -102,9 +115,9 @@ through one command,
 - RUNTIME:  exercises placement, epoch fencing and worker lifecycle
   traces.  Run it alone with `zsh dev/gates.sh --leg runtime`.
 - SOURCE: checks native evaluation, browser artifact execution, import
-  contracts, and explicit runtime failures.
+  contracts, concrete manifests, retained freeze sessions and explicit failures.
 - BROWSER:  checks the GLUE boundary, asynchronous lifecycle races,
-  actual nested Workers, Web Locks and IndexedDB transactions in
+  actual nested Workers, source workloads, Web Locks and IndexedDB transactions in
   isolated Chrome.  Run it alone with `zsh dev/gates.sh --leg browser`.
 - ACCEPTANCE: runs all six source-driven behaviors under Chrome, with
   pod work within 3 seconds and the leader's view within 5 seconds after
@@ -114,8 +127,8 @@ through one command,
 - DENOMINATORS:  verifies the frozen corpus and records the raw compiler
   time.
 - FLOOR:  compares the Kite pipeline, including js_of_ocaml emission
-  for both browser bridges, source artifact emission and browser asset
-  assembly, per kloc with raw `ocamlopt`
+  for both browser bridges (including the durable models and evaluator CPS), source artifact emission and browser asset
+  assembly (with independent bundle emission overlapped), per kloc with raw `ocamlopt`
   on the pinned floor corpus, using five runs on each side in one minute.
 
 The frozen kanon denominators are 1,641.599 serial and 712.803 parallel;
@@ -135,6 +148,11 @@ and fail its named semantic test.  All edits occur in disposable copies.
 305 seconds hidden.  See [the M1-B brief](dev/stage-M1-B-brief.md) for
 the host boundary and PR-2 timing interpretation. The full M1-C gate is
 `node dev/drive.mjs`.
+
+`node dev/browser-test.mjs --pressure` adds a PR-1 diagnostic that records
+memory-pressure injection and observed freeze/resume events separately from
+deliberate page closure. It reports whether a discard actually occurred.
+M2-C's complete twelve-fault browser matrix remains outstanding.
 
 ## Licence and author
 

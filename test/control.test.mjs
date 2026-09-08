@@ -3,9 +3,10 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const [modelSource, hostSource, controlSource, podSource] = await Promise.all([
+const [modelSource, hostSource, controlSource, podSource, durableSource] = await Promise.all([
   '../_build/default/browser/model.bc.js', '../browser/node-host.js',
-  '../browser/control.js', '../browser/pod.js'
+  '../browser/control.js', '../browser/pod.js',
+  '../browser/durable.js'
 ].map(path => readFile(new URL(path, import.meta.url), 'utf8')));
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
@@ -27,7 +28,7 @@ function control(options = {}) {
   const f = { replies: [], timers: [], workers: [], held: new Map(),
     elections: [], claims: [], writes: [], opens: 0, closes: 0,
     nodeRequests: 0, now: 1700000100000, releases: [], readStarted: deferred(), placedStarted: deferred(),
-    openStarted: deferred(), heartbeatStarted: deferred(), ...options };
+    openStarted: deferred(), heartbeatStarted: deferred(), atomicStarted: deferred(), ...options };
   let listener;
   let nextId = 0;
   const state = { epoch: 1, seq: 0, owner: 'previous', entries: [] };
@@ -47,7 +48,27 @@ function control(options = {}) {
     f.held.set(name, value);
     return value;
   }
+  const snapshotOf = read => read.all ? structuredClone(state.entries)
+    : read.store === 'meta' && read.key === 'state'
+      ? {epoch: state.epoch, seq: state.seq, owner: state.owner} : f.manifest;
+  const applyWrite = write => {
+    if (write.store === 'log') state.entries.push(write.value);
+    else if (write.key === 'manifest') f.manifest = write.value;
+    else { state.epoch = write.value.epoch; state.seq = write.value.seq; }
+  };
   const store = {
+    async atomic({reads = [], plan}) {
+      if (f.atomicGate) {
+        const gate = f.atomicGate;
+        f.atomicGate = undefined;
+        f.atomicStarted.resolve();
+        await gate.promise;
+      }
+      const result = plan(Object.fromEntries(reads.map(read => [read.as, snapshotOf(read)])));
+      if (!result.ok) return result;
+      (result.value.writes || []).forEach(applyWrite);
+      return {ok: true, value: result.value.receipt};
+    },
     async read() {
       const snapshot = structuredClone(state);
       if (f.readGate) {
@@ -90,6 +111,7 @@ function control(options = {}) {
     close() { f.closes += 1; return { ok: true }; }
   };
   const glue = {
+    doorbell() { return {ok: false, error: 'unavailable'}; },
     async open() {
       f.opens += 1;
       f.openStarted.resolve();
@@ -141,7 +163,8 @@ function control(options = {}) {
     importScripts() {}, self: {}, console,
     setTimeout(callback, delay) { f.timers.push({ callback, delay }); } };
   vm.createContext(world);
-  for (const source of [modelSource, hostSource, controlSource]) vm.runInContext(source, world);
+  for (const source of [modelSource, durableSource, hostSource, controlSource])
+    vm.runInContext(source, world);
   f.send = (op, args = {}) => {
     const id = ++nextId;
     listener({ id, op, ...args });
@@ -152,6 +175,7 @@ function control(options = {}) {
     return f.replies.find(reply => reply.id === id);
   };
   f.request = (op, args) => f.response(f.send(op, args));
+  f.log = () => structuredClone(state.entries);
   f.boot = () => f.request('boot', { cluster: 'test', nodeId: 'a' });
   f.runLoop = async () => {
     await until(() => f.timers.some(timer => timer.delay === 250));
@@ -386,6 +410,82 @@ test('replay does not start a pod removed by a later desired record', async () =
   assert.equal(view.duplicateRefusals.count, 0);
   assert.equal(view.duplicateRefusals.last, null);
   await f.request('close');
+});
+
+test('manifest admission requires fresh visibility and enforces its bound and namespace', async () => {
+  const f = control();
+  const manifest = {kind: 'deployment', name: 'web', replicas: 1, bound: 2,
+    tolerateHidden: false};
+  assert.equal((await f.request('boot', {cluster: 'test', nodeId: 'a',
+    manifest: {...manifest, replicas: 3}})).error, 'invalid_manifest_replicas');
+  assert.equal(f.opens, 0);
+  assert.equal((await f.request('boot', {cluster: 'test', nodeId: 'a', manifest})).ok, true);
+  assert.ok(f.held.has('kite:test:workload:web:node:a'));
+  f.elections[0].grant();
+  await until(() => f.claims.length === 1);
+  f.claims[0].resolve();
+  await until(async () => (await f.request('view')).value.leaderEpoch === 2);
+  await f.runLoop();
+  assert.equal((await f.request('view')).value.planning.plan.error, 'Admit_denied:no_eligible_nodes');
+  assert.equal(f.writes.some(write => write.payload.kind === 'command'), false);
+  assert.equal((await f.request('desired', {count: 3})).error, 'invalid_desired');
+  // The stored bound is inclusive, so the count at the bound is accepted.
+  assert.equal((await f.request('desired', {count: 2})).ok, true);
+  assert.equal(f.writes.some(write => write.payload.kind === 'desired' &&
+    write.payload.count === 2), true);
+  assert.equal((await f.request('visibility', {observation: {
+    incarnation: 1, sequence: 1, visibility: 'hidden'}})).ok, true);
+  await f.runLoop();
+  assert.equal((await f.request('view')).value.planning.plan.error, 'Admit_denied:no_eligible_nodes');
+  assert.equal((await f.request('visibility', {observation: {
+    incarnation: 1, sequence: 2, visibility: 'visible'}})).ok, true);
+  await f.runLoop();
+  assert.equal(f.writes.some(write => write.payload.kind === 'command'), true);
+  assert.equal((await f.request('freeze')).ok, true);
+  assert.equal((await f.request('resume')).ok, true);
+  assert.equal((await f.request('visibility', {observation: {
+    incarnation: 1, sequence: 3, visibility: 'visible'}})).error, 'stale_observation');
+  assert.equal((await f.request('view')).value.observation, undefined);
+  await f.request('close');
+});
+
+test('every stored contract field refuses a conflicting join before node acquisition', async () => {
+  const manifest = {kind: 'deployment', name: 'web', replicas: 1, bound: 2,
+    tolerateHidden: true};
+  // Each clause of the stored contract refuses on its own.
+  for (const change of [{kind: 'stateful_set'}, {replicas: 0}, {bound: 3},
+    {tolerateHidden: false}]) {
+    const f = control({manifest});
+    const joined = await f.request('boot', {cluster: 'test', nodeId: 'a',
+      manifest: {...manifest, ...change}, visibility: 'visible'});
+    assert.equal(joined.error, 'manifest_conflict', JSON.stringify(change));
+    assert.equal(f.nodeRequests, 0);
+    assert.equal(f.closes, 1);
+    assert.deepEqual(f.manifest, manifest);
+    assert.equal((await f.request('close')).ok, true);
+    assert.equal(f.closes, 1);
+  }
+});
+
+test('a service send committed while close clears the feed keeps its receipt', async () => {
+  const manifest = {kind: 'deployment', name: 'web', replicas: 1, bound: 2,
+    tolerateHidden: true};
+  const f = control();
+  assert.equal((await f.request('boot', {cluster: 'test', nodeId: 'a', manifest,
+    visibility: 'visible'})).ok, true);
+  const gate = deferred();
+  f.atomicGate = gate;
+  const sent = f.request('service', {epoch: 1, event: {kind: 'register', name: 'api'}});
+  await f.atomicStarted.promise;
+  assert.equal((await f.request('close')).ok, true);
+  gate.resolve();
+  const reply = await sent;
+  assert.equal(reply.ok, true, reply.error);
+  assert.deepEqual(f.replies.filter(reply => reply.kind === 'diagnostic'), []);
+  const records = f.log().filter(entry => entry.payload.kind === 'service');
+  assert.equal(records.length, 1);
+  assert.equal(reply.value.seq, records[0].seq);
+  assert.deepEqual(records[0].payload.event, {kind: 'register', name: 'api'});
 });
 
 function pod(options = {}) {

@@ -115,6 +115,13 @@ globalThis.KiteNode = class {
       await this.stop(worker);
       return;
     }
+    if (this.options.onStart) {
+      const attached = await this.options.onStart(worker, epoch);
+      if (!attached.ok || !this.current(worker, 'running') || epoch !== this.view().epoch) {
+        await this.stop(worker);
+        return;
+      }
+    }
     handle.published = true;
   }
   async terminate(worker) {
@@ -135,6 +142,10 @@ globalThis.KiteNode = class {
         const killed = this.glue.kill(handle.native);
         if (!killed.ok) { this.error = killed.error; retry(); return; }
         handle.killed = true;
+      }
+      if (this.options.onStop) {
+        const stopped = await this.options.onStop(worker);
+        if (!stopped.ok) { this.error = stopped.error; retry(); return stopped; }
       }
       if (handle.place) await handle.place.release();
       handle.place = null;
@@ -160,6 +171,10 @@ globalThis.KiteNode = class {
       case 'release_place': {
         const handle = this.workers.get(worker.ticket);
         if (handle && handle.place) {
+          if (this.options.onStop) {
+            const stopped = await this.options.onStop(worker);
+            if (!stopped.ok) return stopped;
+          }
           const lease = handle.place;
           handle.place = null;
           handle.published = false;

@@ -1,5 +1,6 @@
 /* One control Worker owns its node lease and every local pod handle. */
-importScripts('glue.js', '../_build/default/browser/model.bc.js', 'node-host.js');
+importScripts('glue.js', '../_build/default/browser/model.bc.js',
+  'durable.js', 'node-host.js');
 const glue = globalThis.KiteGlue;
 const model = globalThis.KiteModel;
 let host;
@@ -17,10 +18,20 @@ let generation = 0;
 let queue = Promise.resolve();
 let freezing;
 let resuming;
+let workload;
+let observation;
+let feed;
+let services;
+const volumes = new Map();
 const ticks = new Map();
 // Seconds from a fixed origin fit the shared js_of_ocaml integer range.
 const nowTick = () => Math.floor(Date.now() / 1000) - 1700000000;
-const append = (epoch, payload, expectedSeq) => store.append(epoch, payload, expectedSeq);
+const append = async (epoch, payload, expectedSeq) => {
+  const result = await store.append(epoch, payload, expectedSeq);
+  if (result.ok && feed) feed.ring(result.value.seq);
+  return result;
+};
+const readStore = () => feed ? feed.poll() : store.read();
 const failure = error => ({ok: false, error: String(error && error.message || error)});
 function enqueue(operation) {
   const result = queue.then(operation).catch(failure);
@@ -42,7 +53,7 @@ function elect() {
     let adopted = false;
     try {
       if (!current()) return;
-      const read = await store.read();
+      const read = await readStore();
       if (!current() || !read.ok) return;
       const claimed = await store.claim(read.value.epoch, host.view().nodeId);
       if (!claimed.ok || !current()) return;
@@ -57,7 +68,7 @@ function elect() {
 }
 function snapshot(read, held) {
   const nodes = new Map();
-  let desired = 0;
+  let desired = workload ? workload.replicas : 0;
   for (const entry of read.entries) {
     const payload = entry.payload;
     if (payload.kind === 'desired') desired = payload.count;
@@ -71,6 +82,9 @@ function snapshot(read, held) {
     .map(parts => Number(parts[1]));
   const now = nowTick();
   return {desired, now, epoch: read.epoch, placements, podLocks,
+    observations: [...nodes.values()].filter(node => node.observation &&
+      node.observation.incarnation === node.incarnation && now - node.heartbeat <= 5)
+      .map(node => ({nodeId: node.nodeId, ...node.observation})),
     nodes: [...nodes.values()].map(node => ({...node,
       lockHeld: held.includes(`${prefix}:node:${node.nodeId}`)}))};
 }
@@ -78,7 +92,7 @@ async function reconcile() {
   const startedAt = generation;
   const current = () => !closed && generation === startedAt &&
     host.view().mode === 'ready' && host.view().nodeLock;
-  const read = await store.read();
+  const read = await readStore();
   if (!current()) return {ok: true};
   if (!read.ok) return read;
   lastRead = read.value;
@@ -86,10 +100,23 @@ async function reconcile() {
     const observed = await host.event({kind: 'observe_epoch', epoch: lastRead.epoch});
     if (!observed.ok) return observed;
     if (!current()) return {ok: true};
+    for (const [ticket, volume] of volumes) {
+      const view = volume.view();
+      if (view.writer && view.writer.epoch === lastRead.epoch) continue;
+      if (!view.writer && view.phase !== 'detached') continue;
+      if (view.writer) {
+        const released = await volume.freeze();
+        if (!released.ok) return released;
+      }
+      if (!current() || volumes.get(ticket) !== volume) return {ok: true};
+      const reclaimed = await volume.resume(lastRead.epoch);
+      if (!reclaimed.ok) return reclaimed;
+      if (!current()) return {ok: true};
+    }
   }
   if (host.view().mode !== 'ready' || !host.view().nodeLock) return {ok: true};
   const commands = new Map();
-  let desired = 0;
+  let desired = workload ? workload.replicas : 0;
   for (const entry of lastRead.entries) {
     if (entry.payload.kind === 'desired') desired = entry.payload.count;
     if (entry.seq <= cursor) continue;
@@ -111,7 +138,7 @@ async function reconcile() {
   if (lastRead.epoch > 0 && now !== heartbeat && host.view().nodeLock) {
     const saved = await append(lastRead.epoch, {kind: 'heartbeat',
       nodeId: host.view().nodeId, incarnation: host.view().incarnation,
-      heartbeat: now, phase: 'active'});
+      heartbeat: now, phase: 'active', ...(observation ? {observation} : {})});
     if (!saved.ok) return saved;
     // A freeze may have run while the append was open. Its resume resets the
     // heartbeat, so this cycle records the tick only while it is still fresh.
@@ -131,7 +158,7 @@ async function reconcile() {
   }
   if (!leader) { elect(); return {ok: true}; }
   // A heartbeat or another tab may have advanced the log since command replay.
-  const fresh = await store.read();
+  const fresh = await readStore();
   if (!current()) return {ok: true};
   if (!fresh.ok) return fresh;
   if (fresh.value.epoch !== leaderEpoch) return {ok: false, error: 'stale_epoch'};
@@ -140,7 +167,9 @@ async function reconcile() {
   if (!current()) return {ok: true};
   if (!locks.ok) return locks;
   const snap = snapshot(lastRead, locks.value);
-  const plan = model.plan(snap, leaderEpoch, snap.desired, 5, 64);
+  const plan = workload
+    ? model.manifestPlan({...workload, replicas: snap.desired}, snap, snap.observations)
+    : model.plan(snap, leaderEpoch, snap.desired, 5, 64);
   lastPlan = {snapshot: snap, plan};
   if (!plan.ok) return plan;
   let expectedSeq = lastRead.seq;
@@ -160,6 +189,7 @@ async function loop() {
 }
 function freeze() {
   generation += 1;
+  observation = undefined;
   if (freezing) return freezing;
   const pending = election;
   if (pending) pending.abort.abort();
@@ -186,7 +216,7 @@ function resume() {
     if (closed) return {ok: false, error: 'closed'};
     if (generation !== attempt.generation) return {ok: false, error: 'lifecycle_changed'};
     if (result.ok && !host.view().nodeLock) return {ok: false, error: 'node_unavailable'};
-    if (result.ok) { heartbeat = -1; elect(); }
+    if (result.ok) { heartbeat = -1; observation = undefined; elect(); }
     return result;
   })().finally(() => { if (resuming === attempt) resuming = undefined; });
   return attempt.done;
@@ -199,21 +229,75 @@ async function request(message) {
       return {ok: false, error: 'invalid_cluster'};
     if (typeof message.nodeId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(message.nodeId))
       return {ok: false, error: 'invalid_node'};
+    if (message.manifest !== undefined) {
+      const checked = model.validateWorkload(message.manifest);
+      if (!checked.ok) return checked;
+    }
     const startedAt = generation;
-    const opened = await glue.open(`kite-${message.cluster}`);
+    const namespace = message.manifest ? `:workload:${message.manifest.name}` : '';
+    const opened = await glue.open(`kite-${message.cluster}${namespace}`);
     if (!opened.ok) return opened;
+    if (message.manifest) {
+      const {kind, name, replicas, bound, tolerateHidden} = message.manifest;
+      const contract = {kind, name, replicas, bound, tolerateHidden};
+      const boundContract = await opened.value.atomic({
+        reads: [{store: 'meta', key: 'manifest', as: 'manifest'}], plan: read => {
+          if (read.manifest && Object.keys(contract).some(key => read.manifest[key] !== contract[key]))
+            return {ok: false, error: 'manifest_conflict'};
+          return {ok: true, value: {writes: read.manifest ? [] :
+            [{store: 'meta', key: 'manifest', value: contract}], receipt: contract}};
+        }});
+      if (!boundContract.ok) { opened.value.close(); return boundContract; }
+    }
     if (closed || generation !== startedAt) {
       opened.value.close();
       return {ok: false, error: 'lifecycle_changed'};
     }
     store = opened.value;
-    prefix = `kite:${message.cluster}`;
+    workload = message.manifest && {...message.manifest};
+    prefix = `kite:${message.cluster}${namespace}`;
+    if (workload) {
+      const polling = KiteDurable.feed(glue, store, KiteDurableModel, {prefix, interval: null});
+      if (!polling.ok) { store.close(); return polling; }
+      feed = polling.value;
+      services = KiteDurable.services(store, KiteDurableModel, {
+        ring: seq => feed && feed.ring(seq),
+        onError: error => glue.send(self, {kind: 'diagnostic', error})});
+    }
+    observation = ['visible', 'hidden'].includes(message.visibility)
+      ? {incarnation: 1, visibility: message.visibility, sequence: 0} : undefined;
     const candidate = new KiteNode(model, glue, {nodeId: message.nodeId, prefix,
       podUrl: 'pod.js', append,
-      onTick: tick => { ticks.set(tick.pod, tick); glue.send(self, {kind: 'tick', ...tick}); }});
+      onStart: async (worker, epoch) => {
+        if (!workload || workload.kind !== 'stateful_set') return {ok: true};
+        const created = KiteDurable.volume(glue, store, KiteDurableModel,
+          {prefix, namespace: workload.name, ordinal: worker.pod});
+        if (!created.ok) return created;
+        volumes.set(worker.ticket, created.value);
+        return created.value.attach(epoch);
+      },
+      onStop: async worker => {
+        const volume = volumes.get(worker.ticket);
+        if (!volume) return {ok: true};
+        const result = await volume.freeze();
+        await volume.settled();
+        if (result.ok && volumes.get(worker.ticket) === volume) volumes.delete(worker.ticket);
+        return result;
+      },
+      onTick: tick => {
+        ticks.set(tick.pod, tick);
+        const volume = volumes.get(tick.ticket);
+        if (volume && volume.view().phase === 'attached') {
+          volume.checkpoint([String(tick.value)]).then(result => {
+            if (!result.ok) glue.send(self, {kind: 'diagnostic', error: result.error});
+          });
+        }
+        glue.send(self, {kind: 'tick', ...tick});
+      }});
     const started = candidate.error ? {ok: false, error: candidate.error} : await candidate.boot();
     if (!started.ok || closed || generation !== startedAt) {
       if (!candidate.error) await candidate.event({kind: 'freeze'});
+      if (feed) { feed.stop(); feed = undefined; }
       store.close();
       store = undefined;
       return started.ok ? {ok: false, error: 'lifecycle_changed'} : started;
@@ -233,18 +317,51 @@ async function request(message) {
   switch (message.op) {
     case 'view': return {ok: true, value: {node: host.view(), leaderEpoch, cursor,
       duplicateRefusals: host.duplicateRefusals,
-      log: lastRead, planning: lastPlan, ticks: [...ticks.values()], error: host.error}};
+      log: lastRead, planning: lastPlan, ticks: [...ticks.values()], error: host.error,
+      workload, observation, volumes: [...volumes.values()].map(volume => volume.view())}};
+    case 'visibility': {
+      const value = message.observation;
+      if (!value || !['visible', 'hidden'].includes(value.visibility) ||
+          value.incarnation !== host.view().incarnation || host.view().mode !== 'ready' ||
+          !Number.isSafeInteger(value.sequence) || value.sequence < 1 ||
+          (observation && value.sequence <= observation.sequence))
+        return {ok: false, error: 'stale_observation'};
+      observation = {...value};
+      heartbeat = -1;
+      return {ok: true};
+    }
+    case 'service': {
+      if (!services) return {ok: false, error: 'no_workload'};
+      if (host.view().mode !== 'ready' || !host.view().nodeLock)
+        return {ok: false, error: 'node_unavailable'};
+      return services.submit(message.epoch, message.event);
+    }
+    case 'services': return services ? services.restore() : {ok: false, error: 'no_workload'};
+    case 'checkpoint': {
+      if (host.view().mode !== 'ready' || !host.view().nodeLock)
+        return {ok: false, error: 'node_unavailable'};
+      if (volumes.size === 0) return {ok: false, error: 'checkpoint_unavailable'};
+      if (message.entries !== undefined && (!Array.isArray(message.entries) ||
+          message.entries.some(entry => typeof entry !== 'string')))
+        return {ok: false, error: 'invalid_checkpoint'};
+      const results = await Promise.all([...volumes.entries()].map(([ticket, volume]) => {
+        const tick = [...ticks.values()].find(tick => tick.ticket === ticket);
+        return volume.checkpoint(message.entries || (tick ? [String(tick.value)] : []));
+      }));
+      return results.find(result => !result.ok) || {ok: true, value: results.map(result => result.value)};
+    }
     case 'desired': {
-      if (!Number.isInteger(message.count) || message.count < 0 || message.count > 64)
+      if (!Number.isInteger(message.count) || message.count < 0 ||
+          message.count > (workload ? workload.bound : 64))
         return {ok: false, error: 'invalid_desired'};
-      const read = await store.read();
+      const read = await readStore();
       if (!read.ok) return read;
       const payload = {kind: 'desired', count: message.count};
       const saved = await append(read.value.epoch, payload);
       if (saved.ok || saved.error !== 'stale_epoch') return saved;
       // An election claimed a new epoch while this read was open. Retry once
       // at the epoch the log now holds, so the count is not discarded.
-      const fresh = await store.read();
+      const fresh = await readStore();
       return fresh.ok ? append(fresh.value.epoch, payload) : fresh;
     }
     case 'freeze': return freeze();
@@ -253,6 +370,7 @@ async function request(message) {
       if (closed) return freezing || {ok: true};
       closed = true;
       const frozen = await freeze();
+      if (feed) { feed.stop(); feed = undefined; }
       const disconnected = store.close();
       return frozen.ok ? disconnected : frozen;
     }

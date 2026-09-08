@@ -111,6 +111,151 @@ test('freeze expressions remain deferred during source initialization', async ()
   });
 });
 
+test('four source fixtures emit validated manifest data through the retained evaluator', async () => {
+  const expected = {
+    deployment: [{kind: 'deployment', name: 'web', replicas: 2, bound: 3, tolerateHidden: false}],
+    'stateful-set': [{kind: 'stateful_set', name: 'data', replicas: 1, bound: 2, tolerateHidden: true}],
+    service: [{kind: 'deployment', name: 'web', replicas: 1, bound: 2, tolerateHidden: true},
+      {kind: 'service', name: 'api', target: 'web'}],
+    'freeze-drain': [{kind: 'stateful_set', name: 'data', replicas: 1, bound: 2, tolerateHidden: true},
+      {kind: 'drain', name: 'shutdown', target: 'data'}]
+  };
+  for (const [fixture, manifests] of Object.entries(expected)) {
+    await compiled(await readFile(path.join(root, 'test/source', `${fixture}.kite`), 'utf8'), async context => {
+      const calls = [];
+      const session = context.KiteSource.createSession(context.KiteArtifact, (name, argument) => {
+        calls.push([name, argument]); return null;
+      });
+      const answer = await session.start();
+      assert.equal(answer.ok, true);
+      assert.deepEqual(plain(answer.manifests), manifests);
+      assert.deepEqual(calls, fixture === 'freeze-drain' ? [['host_probe', 'startup']] : []);
+      const frozen = await session.freeze({session: session.token, sequence: 1});
+      assert.deepEqual(plain(frozen), {ok: true, value: null});
+      assert.deepEqual(calls, fixture === 'freeze-drain'
+        ? [['host_probe', 'startup'], ['host_probe', 'retained'], ['host_checkpoint', 'data']] : []);
+      session.close();
+    });
+  }
+});
+
+test('retained freeze captures its declaration scope and never replays startup effects', async () => {
+  await compiled(`import touch : Int -> Int cost 1 deadline 500
+    let origin = touch 7
+    freeze { store } = touch origin
+    let origin = 99`, async context => {
+    const calls = [];
+    let complete;
+    const session = context.KiteSource.createSession(context.KiteArtifact, (name, argument) => {
+      calls.push([name, argument]);
+      return calls.length === 2 ? new Promise(resolve => { complete = resolve; }) : argument;
+    });
+    assert.equal((await session.freeze({session: session.token, sequence: 1})).error, 'session_not_ready');
+    assert.deepEqual(plain(await session.start()), {ok: true, value: 99, manifests: []});
+    assert.equal((await session.start()).error, 'session_started');
+    assert.equal((await session.freeze({session: 'old', sequence: 1})).error, 'stale_observation');
+    for (const sequence of [0, -1, 1.5, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      assert.equal((await session.freeze({session: session.token, sequence})).error, 'stale_observation');
+    }
+    const first = session.freeze({session: session.token, sequence: 1});
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal((await session.freeze({session: session.token, sequence: 2})).error, 'session_not_ready');
+    complete(7);
+    assert.deepEqual(plain(await first), {ok: true, value: 7});
+    assert.equal((await session.freeze({session: session.token, sequence: 1})).error, 'stale_observation');
+    assert.deepEqual(plain(await session.freeze({session: session.token, sequence: 2})), {ok: true, value: 7});
+    assert.deepEqual(calls, [['touch', 7], ['touch', 7], ['touch', 7]]);
+    session.close();
+    assert.equal((await session.freeze({session: session.token, sequence: 3})).error, 'session_not_ready');
+  });
+});
+
+test('session close suppresses late host continuations and following effects', async () => {
+  await compiled(`import touch : Int -> Int cost 1 deadline 500
+    let first = touch 7 let result = touch 9`, async context => {
+    const calls = [];
+    let complete;
+    const session = context.KiteSource.createSession(context.KiteArtifact, (name, argument) => {
+      calls.push([name, argument]);
+      return new Promise(resolve => { complete = resolve; });
+    });
+    const started = session.start();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    session.close();
+    complete(7);
+    assert.deepEqual(plain(await started), {ok: false, error: 'session_closed'});
+    assert.deepEqual(calls, [['touch', 7]]);
+  });
+});
+
+test('manifest field expressions execute once and malformed decoded schemas cannot invoke hosts', async () => {
+  await compiled(`import count : Unit -> Int cost 1 deadline 500
+    manifest M { Deployment web { replicas = count (), bound = 3, tolerate_hidden = true } }`, async context => {
+    let calls = 0;
+    const host = () => { calls += 1; return 2; };
+    const session = context.KiteSource.createSession(context.KiteArtifact, host);
+    assert.equal((await session.start()).manifests[0].replicas, 2);
+    await session.freeze({session: session.token, sequence: 1});
+    assert.equal(calls, 1);
+    const original = plain(context.KiteArtifact);
+    for (const corrupt of [
+      item => { item.kind = 'unknown'; },
+      item => { item.fields.pop(); },
+      item => { item.fields.push(item.fields[0]); }
+    ]) {
+      const artifact = plain(original);
+      corrupt(artifact.items[1]);
+      const bad = context.KiteSource.createSession(artifact, host);
+      const answer = await bad.start();
+      assert.equal(answer.ok, false);
+      assert.match(answer.error, /manifest_schema:/);
+      assert.equal(calls, 1);
+    }
+  });
+  // Fields evaluate in declaration order, not in the order of the schema.
+  await compiled(`import mark : Str -> Int cost 1 deadline 500
+    manifest M { Deployment web { tolerate_hidden = mark "a" == 1, bound = mark "b" + 2,
+      replicas = mark "c" } }`, async context => {
+    const seen = [];
+    const answers = {a: 1, b: 1, c: 2};
+    const session = context.KiteSource.createSession(context.KiteArtifact, (name, argument) => {
+      seen.push([name, argument]);
+      return answers[argument];
+    });
+    const answer = await session.start();
+    assert.equal(answer.ok, true, answer.error);
+    assert.deepEqual(seen, [['mark', 'a'], ['mark', 'b'], ['mark', 'c']]);
+    assert.deepEqual(plain(answer.manifests), [{kind: 'deployment', name: 'web',
+      replicas: 2, bound: 3, tolerateHidden: true}]);
+    session.close();
+  });
+});
+
+test('numeric manifest bounds and concrete field types are enforced at execution', async () => {
+  for (const [replicas, bound, error] of [['3', '2', 'invalid_replicas'], ['0', '65', 'invalid_bound'],
+    ['true', '2', 'expected_integer']]) {
+    await compiled(`manifest M { Deployment web { replicas = ${replicas}, bound = ${bound}, tolerate_hidden = false } }`, async context => {
+      const session = context.KiteSource.createSession(context.KiteArtifact, () => assert.fail('unexpected host call'));
+      const answer = await session.start();
+      assert.equal(answer.ok, false);
+      assert.match(answer.error, new RegExp(error));
+    });
+  }
+});
+
+test('a fresh session rejects a freeze observation from a previous session', async () => {
+  await compiled('let result = 7 freeze { store } = 9', async context => {
+    const old = context.KiteSource.createSession(context.KiteArtifact, () => {});
+    await old.start();
+    old.close();
+    const session = context.KiteSource.createSession(context.KiteArtifact, () => {});
+    await session.start();
+    assert.equal((await session.freeze({session: old.token, sequence: 1})).error, 'stale_observation');
+    assert.deepEqual(plain(await session.freeze({session: session.token, sequence: 1})), {ok: true, value: 9});
+    session.close();
+  });
+});
+
 test('divergent recursion cooperatively yields and malformed artifacts return values', async () => {
   await compiled('let rec spin x = spin x let result = spin 0', async context => {
     const state = context.KiteProgram.start(context.KiteArtifact);

@@ -1,0 +1,8 @@
+m0-spine.kite: OK
+floor-corpus.txt: OK
+FLOOR pipeline_ms_per_kloc=385.086 floor_ms_per_kloc=442.000 num_sha=036cf35467ad2c3775fabc70c6e44891ce6ee1ee585b5bd8ecf49bde759ff3f9 flo_sha=d5334cf0b4d1b1a1db5336857c880b40d74aa639449365bfbbd0b81bb345722c num_kloc=1.055 flo_kloc=0.572 host=Onyekachukwus-MacBook-Pro-2.local arch=arm64 load_before=8.66 load_after=8.29 minute_before=2026-09-07T22:22 minute_after=2026-09-07T22:22
+DENOM-FROZEN kanon_serial=1641.599 kanon_parallel=712.803
+PIPELINE includes=check,lower,source-artifact,js_of_ocaml-control-and-durable,js_of_ocaml-evaluator-cps,browser-assets
+WASMGC-ONLY not measured, M1 retains the fixed Stage 0 Wasm workload
+GATE-OK
+PASS FLOOR

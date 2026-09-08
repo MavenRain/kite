@@ -5,9 +5,13 @@ import re
 import subprocess
 import sys
 
-SCRIPTS = {'glue.js', 'node-host.js', 'control.js', 'pod.js', 'page.js', 'source.js'}
-FILES = SCRIPTS | {'model.ml', 'program.ml', 'dune', 'index.html'}
-FORBIDDEN = {'Worker', 'navigator', 'indexedDB', 'postMessage', 'eval', 'Function'}
+SCRIPTS = {'glue.js', 'node-host.js', 'control.js', 'pod.js', 'page.js', 'source.js',
+           'durable.js', 'workloads.js'}
+FILES = SCRIPTS | {'model.ml', 'program.ml', 'durable_model.ml', 'dune', 'index.html'}
+PAGE_SCRIPTS = ['glue.js', '../_build/default/browser/program.bc.js',
+                'source.js', 'workloads.js', 'page.js']
+FORBIDDEN = {'Worker', 'navigator', 'indexedDB', 'postMessage', 'eval', 'Function',
+             'BroadcastChannel'}
 IDENTIFIER = re.compile(r'[A-Za-z_$][A-Za-z0-9_$]*')
 ESCAPE = re.compile(r'\\(?:u\{([0-9a-fA-F]+)\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([\s\S]))')
 
@@ -113,7 +117,7 @@ class PageScripts(HTMLParser):
         if tag == 'script':
             self.in_script = True
             sources = [value for name, value in attrs if name == 'src']
-            if len(sources) != 1 or sources[0] not in SCRIPTS:
+            if len(sources) != 1 or sources[0] not in PAGE_SCRIPTS:
                 self.errors.append('script requires one known local src')
             self.scripts.extend(sources)
 
@@ -128,8 +132,8 @@ class PageScripts(HTMLParser):
     def validate(self, source):
         self.feed(source)
         self.close()
-        if self.scripts != ['glue.js', 'page.js']:
-            self.errors.append('page scripts must be glue.js then page.js')
+        if self.scripts != PAGE_SCRIPTS:
+            self.errors.append('page scripts must match the explicit shipping sequence')
         return self.errors
 
 
@@ -155,7 +159,7 @@ def audit(root):
     if not 1 <= lines <= 300:
         errors.append(f'GLUE lines={lines}, limit=300')
     errors.extend(PageScripts().validate((browser / 'index.html').read_text()))
-    for name in sorted(SCRIPTS | {'model.ml', 'program.ml'}):
+    for name in sorted(SCRIPTS | {'model.ml', 'program.ml', 'durable_model.ml'}):
         file = browser / name
         if name != 'glue.js':
             forbidden = code_tokens(file.read_text(), ocaml=name.endswith('.ml')) & FORBIDDEN

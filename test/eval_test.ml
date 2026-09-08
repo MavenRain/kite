@@ -10,6 +10,8 @@ let output expected source () = Result.fold ~error:(fun message -> print_endline
     ~ok:(fun value -> String.equal expected (E.value_text value)) (run source)
 let failure expected source () = Result.fold ~ok:(fun _value -> false)
     ~error:(String.equal expected) (run source)
+let emission_failure expected source () = Result.fold ~ok:(fun _program -> false)
+    ~error:(String.equal expected) (prepare source)
 let direct expected term () =
   Result.fold ~ok:(fun _value -> false) ~error:(fun error -> String.equal expected (E.error_text error))
     (E.native (E.expression [] term (fun value -> E.Done value)))
@@ -21,7 +23,7 @@ let import_roundtrip () =
       E.value_text argument = "7" &&
       Result.fold ~error:(fun _error -> false) ~ok:(fun result -> E.value_text result = "10")
         (E.native (resume (Ok (E.int_value 9))))
-    | E.Done _ | E.Failed _ | E.Continue _ -> false)
+    | E.Done _ | E.Failed _ | E.Continue _ | E.Ready _ -> false)
     (prepare "import read : Int -> Int cost 1 deadline 50 let result = read 7 + 1")
 let import_rejection () =
   Result.fold ~error:(fun _error -> false) ~ok:(fun program ->
@@ -30,14 +32,37 @@ let import_rejection () =
       Result.fold ~ok:(fun _result -> false)
         ~error:(fun error -> E.error_text error = "expected_host_result")
         (E.native (resume (Ok (E.Lit (Literal.Str "wrong")))))
-    | E.Done _ | E.Failed _ | E.Continue _ -> false)
+    | E.Done _ | E.Failed _ | E.Continue _ | E.Ready _ -> false)
     (prepare "import read : Int -> Int cost 1 deadline 50 let result = read 7")
 let divergence_yields () =
   Result.fold ~error:(fun _error -> false) ~ok:(fun program ->
     match E.advance 1000 (E.start program) with
     | E.Continue _ -> true
-    | E.Done _ | E.Failed _ | E.Call _ -> false)
+    | E.Done _ | E.Failed _ | E.Call _ | E.Ready _ -> false)
     (prepare "let rec spin x = spin x let result = spin 0")
+let retained_freeze () =
+  let rec finish calls state = match E.advance 1000 state with
+    | E.Done value -> calls = [7; 7] && E.value_text value = "7"
+    | E.Call (_imported, argument, resume) ->
+      Result.fold ~error:(fun _error -> false)
+        ~ok:(fun value -> finish (value :: calls) (resume (Ok argument))) (E.integer argument)
+    | E.Continue resume -> finish calls (resume ())
+    | E.Failed _ | E.Ready _ -> false in
+  Result.fold ~error:(fun _error -> false) ~ok:(fun program ->
+    finish [] (E.start_session program (fun session _last ->
+      E.invoke_session session "@freeze" (E.Lit Literal.Unit))))
+    (prepare "import touch : Int -> Int cost 1 deadline 50 let origin = touch 7 freeze { store } = touch origin let origin = 99")
+let concrete_manifests () =
+  let source = "let count = 1 manifest M { Deployment web { replicas = count + 1, bound = 3, tolerate_hidden = false }, StatefulSet data { replicas = 1, bound = 2, tolerate_hidden = true }, Service api { target = \"web\" }, FreezeDrain shutdown { target = \"data\" } } let result = 7" in
+  Result.fold ~error:(fun _error -> false) ~ok:(fun program ->
+    Result.fold ~error:(fun _error -> false) ~ok:(fun value -> E.value_text value = "true")
+      (E.native (E.start_session program (fun session value ->
+        let names = List.map E.Manifest.name session.E.manifests in
+        let pods = List.concat_map E.Manifest.pod_names session.E.manifests in
+        let volumes = List.concat_map E.Manifest.volume_keys session.E.manifests in
+        E.Done (E.bool_value (names = ["web"; "data"; "api"; "shutdown"]
+          && pods = ["web:0"; "web:1"; "data:0"] && volumes = ["data", 0]
+          && E.value_text value = "7")))))) (prepare source)
 let literal n = Ir.ILit (Literal.Int n)
 let cases = [
   "lexical-shadowing", output "3" "let x = 3 let f = fun _ -> x let x = 9 let result = f ()";
@@ -63,6 +88,23 @@ let cases = [
   "function-equality", failure "uncomparable_function" "let f x = x let result = f == f";
   "host-unavailable", failure "host_failed: unavailable: read" "import read : Int -> Int cost 1 deadline 50 let result = read 7";
   "deferred-freeze", output "7" "let result = 7 freeze { store } = 1/0";
+  "retained-freeze-no-startup-replay", retained_freeze;
+  "concrete-manifests", concrete_manifests;
+  "manifest-legacy-compatible", output "7" "manifest M { pod p { image = \"a\", replicas = 3 }, service s { port = 1 } } let result = 7";
+  "manifest-bound-refused", failure "manifest_failed: invalid_replicas"
+    "manifest M { Deployment web { replicas = 3, bound = 2, tolerate_hidden = false } }";
+  "manifest-limit-refused", failure "manifest_failed: invalid_bound"
+    "manifest M { StatefulSet data { replicas = 0, bound = 65, tolerate_hidden = false } }";
+  "manifest-field-types-refused", failure "expected_integer"
+    "manifest M { Deployment web { replicas = true, bound = 2, tolerate_hidden = false } }";
+  "manifest-fields-refused-before-effects", failure "manifest_schema: fields"
+    "manifest M { Service api { target = 1/0, extra = 0 } }";
+  "manifest-fields-refused-at-emission", emission_failure "manifest_schema: fields"
+    "manifest M { Service api { target = 1/0, extra = 0 } }";
+  "manifest-duplicate-fields-refused", failure "manifest_schema: fields"
+    "manifest M { Service api { target = \"web\", target = \"other\" } }";
+  "manifest-duplicate-names-refused", failure "manifest_schema: duplicate_name"
+    "manifest M { Service api { target = \"web\" }, FreezeDrain api { target = \"web\" } }";
   "recursive-value-refused", failure "executable recursive bindings require functions"
     "let result = let rec x = 1/0 in 42";
   "non-utf8-string-refused", failure "executable strings require valid utf-8"

@@ -1,0 +1,15 @@
+✔ shipping builder retains fresh native bundles and an executable source artifact (491.66625ms)
+✔ both emissions overlap, settle, and clean the one-source measurement directory (472.227167ms)
+✔ a failed model emission remains a failure after both children settle (277.659875ms)
+✔ a failed program emission remains a failure after both children settle (280.423542ms)
+✔ source compilation failure prevents emission and removes temporary products (185.293041ms)
+✔ an existing output directory is preserved and refused before compilation (10.365125ms)
+✔ termination reaps both active compilers and cleans temporary output (235.274875ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7015.290709

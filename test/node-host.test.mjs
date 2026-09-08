@@ -327,6 +327,64 @@ test('termination retries refusals while frozen and keeps the life-lock slot occ
   }
 });
 
+test('refused volume cleanup retains placement and retries before releasing its worker slot', async () => {
+  const f = fixture();
+  await f.ready();
+  const handle = await f.start();
+  await f.grant(handle);
+  const place = 'test:place:0:test-node:1';
+  let refused = true;
+  let stopped = 0;
+  f.host.options.onStop = async worker => {
+    assert.equal(worker.ticket, handle.worker.ticket);
+    assert.equal(f.held.has(place), true);
+    stopped += 1;
+    return refused ? {ok: false, error: 'freeze_incomplete'} : {ok: true};
+  };
+  const result = await f.host.stop(handle.worker);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'freeze_incomplete');
+  assert.equal(f.host.error, 'freeze_incomplete');
+  assert.equal(f.held.has(place), true);
+  assert.equal(f.host.workers.get(handle.worker.ticket), handle);
+  assert.equal(f.host.view().workers[0].phase, 'stopping');
+  assert.equal(handle.native.kills, 1);
+  assert.equal(f.timers.length, 1);
+  const blocked = await f.host.event({kind: 'start', epoch: 1, pod: 0, incarnation: 1});
+  assert.equal(blocked.error, 'duplicate_pod');
+  refused = false;
+  await f.timers.shift()();
+  assert.equal(stopped >= 2, true);
+  assert.equal(handle.native.kills, 1);
+  assert.equal(f.held.has(place), false);
+  assert.equal(f.host.workers.size, 0);
+  assert.equal(f.host.view().workers.length, 0);
+});
+
+test('pending volume cleanup withholds placement release and replacement admission', async () => {
+  const f = fixture();
+  await f.ready();
+  const handle = await f.start();
+  await f.grant(handle);
+  const wait = deferred();
+  let cleanupCalls = 0;
+  f.host.options.onStop = async () => {
+    cleanupCalls += 1;
+    return wait.promise;
+  };
+  const stopping = f.host.stop(handle.worker);
+  await tick();
+  assert.equal(cleanupCalls, 1);
+  assert.equal(f.held.has('test:place:0:test-node:1'), true);
+  assert.equal(f.host.view().workers[0].phase, 'stopping');
+  const blocked = await f.host.event({kind: 'start', epoch: 1, pod: 0, incarnation: 1});
+  assert.equal(blocked.error, 'duplicate_pod');
+  wait.resolve({ok: true});
+  assert.equal((await stopping).ok, true);
+  assert.equal(f.held.has('test:place:0:test-node:1'), false);
+  assert.equal(f.host.view().workers.length, 0);
+});
+
 test('duplicate refusal evidence waits for successful termination and life-lock absence', async () => {
   const f = fixture();
   await f.ready();

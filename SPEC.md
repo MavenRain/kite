@@ -407,8 +407,21 @@ groups require lambda bodies; non-function recursive initialization is
 refused. Imports in executable programs are unary functions over closed
 first-order primitive, record or variant data, with distinct field names
 in host records. Scoped record occurrences within source remain supported.
-Freeze declarations are deferred and do not execute during initialization;
-checkpoint and drain integration remains M2.
+Freeze declarations are deferred and do not execute during initialization.
+M2-B retains their lexical closures in source sessions. Fresh lifecycle
+observations invoke the saved body without replaying startup. Checkpoint
+imports can commit or return an explicit refusal during browser drain;
+freeze never guarantees a final durable write.
+
+Concrete manifest entries use `Deployment`, `StatefulSet`, `Service` and
+`FreezeDrain`. Workloads require exactly `replicas`, `bound` and
+`tolerate_hidden`; bindings require exactly `target`. Their expressions use
+the existing evaluator, then native constructors check names, field types
+and numeric limits. Bounds range from zero through 64, with replicas no
+greater than their bound. These are execution-time checks, not indexed
+proofs. See [the M2-B source contracts](dev/stage-M2-B-source-contract.md).
+Generic lowercase manifest entries retain their previous behavior. The
+opaque declaration keywords in the refusal table remain separate forms.
 
 Executable expression, pattern and host-contract nesting has a maximum
 depth of 256, with the root at zero. Deeper structures return

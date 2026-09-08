@@ -1,0 +1,4 @@
+manifest Workloads {
+  StatefulSet data { replicas = 1, bound = 2, tolerate_hidden = true }
+}
+let result = "stateful_set"

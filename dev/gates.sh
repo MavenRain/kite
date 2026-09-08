@@ -14,6 +14,7 @@
 # M1-B adds BROWSER and js_of_ocaml emission to each FLOOR sample.
 # M1-C adds source execution and full hidden-tab acceptance.
 # M2-A adds DURABLE for the native recovery and admission models.
+# M2-B adds source manifests and native-backed durable browser probes.
 #
 # Each leg prints one PASS or FAIL line.  A FAIL adds the leg's captured
 # output under its line.  Every leg runs even when an earlier one failed,
@@ -402,6 +403,7 @@ leg_durable () {
   return 0
 }
 
+# The compiled source suite has its own floor, so a deleted case cannot pass.
 leg_source () {
   local out code line n ok bad
   out=$(zsh $ROOT/dev/pin-dune.sh dune build bin/kite.exe test/eval_test.exe browser/program.bc.js 2>&1)
@@ -418,14 +420,19 @@ leg_source () {
   n=$(field "$line" tests)
   ok=$(field "$line" ok)
   bad=$(field "$line" fail)
-  if [[ $code -ne 0 || -z $line || $n != $ok || $bad != 0 || ${n:-0} -lt 32 ]]; then
+  if [[ $code -ne 0 || -z $line || $n != $ok || $bad != 0 || ${n:-0} -lt 41 ]]; then
     print -r -- "FAIL SOURCE"
     return 1
   fi
   out=$(node --test --test-reporter=tap $ROOT/test/program.test.mjs 2>&1)
   code=$?
   print -r -- "$out"
-  if [[ $code -ne 0 ]]; then print -r -- "FAIL SOURCE"; return 1; fi
+  n=$(print -r -- "$out" | rg -o -r '$1' '^# pass (\d+)$')
+  bad=$(print -r -- "$out" | rg -o -r '$1' '^# fail (\d+)$')
+  if [[ $code -ne 0 || ${n:-0} -lt 17 || ${bad:-1} -ne 0 ]]; then
+    print -r -- "FAIL SOURCE compiled=${n:-none} failed=${bad:-none} floor=17"
+    return 1
+  fi
   print -r -- "EXECUTION-LINES evaluator=$(wc -l < $ROOT/runtime/eval.ml | tr -d ' ') encoder=$(wc -l < $ROOT/runtime/artifact.ml | tr -d ' ') bridge=$(wc -l < $ROOT/browser/program.ml | tr -d ' ')"
   print -r -- "PASS SOURCE"
   return 0
@@ -442,7 +449,7 @@ leg_browser () {
   code=$?
   print -r -- "$out"
   if [[ $code -ne 0 ]]; then print -r -- "FAIL BROWSER"; return 1; fi
-  out=$(node --test --test-reporter=tap $ROOT/test/glue.test.mjs $ROOT/test/node-host.test.mjs $ROOT/test/control.test.mjs $ROOT/test/source.test.mjs $ROOT/test/acceptance-bridge-test.mjs 2>&1)
+  out=$(node --test --test-reporter=tap $ROOT/test/glue.test.mjs $ROOT/test/node-host.test.mjs $ROOT/test/control.test.mjs $ROOT/test/source.test.mjs $ROOT/test/acceptance-bridge-test.mjs $ROOT/test/durable-browser.test.mjs $ROOT/test/durable-model.test.mjs $ROOT/test/workloads.test.mjs $ROOT/test/pipeline.test.mjs 2>&1)
   code=$?
   print -r -- "$out"
   if [[ $code -ne 0 ]]; then print -r -- "FAIL BROWSER"; return 1; fi
@@ -661,7 +668,7 @@ leg_floor () {
   flo_per=$(awk -v m="$flo" -v k="$flo_kloc" 'BEGIN { printf "%.3f\n", (k + 0 > 0) ? m / k : 0 }')
   print -r -- "FLOOR pipeline_ms_per_kloc=$pipe_per floor_ms_per_kloc=$flo_per num_sha=$num_sha flo_sha=$flo_sha num_kloc=$num_kloc flo_kloc=$flo_kloc host=$(hostname) arch=$(uname -m) load_before=$l1 load_after=$l2 minute_before=$m1 minute_after=$m2"
   print -r -- "DENOM-FROZEN kanon_serial=1641.599 kanon_parallel=712.803"
-  print -r -- "PIPELINE includes=check,lower,source-artifact,js_of_ocaml-control,js_of_ocaml-evaluator,browser-assets"
+  print -r -- "PIPELINE includes=check,lower,source-artifact,js_of_ocaml-control-and-durable,js_of_ocaml-evaluator-cps,browser-assets"
   print -r -- "WASMGC-ONLY not measured, M1 retains the fixed Stage 0 Wasm workload"
   pass=$(awk -v a="$pipe_per" -v b="$flo_per" 'BEGIN { print (a <= b) ? "yes" : "no" }')
   if [[ $pass == "yes" ]]; then
@@ -708,7 +715,7 @@ fail=0
 
 # Line 1 names the tree and line 2 carries the frozen kanon denominators.
 # Both figures come from the sidecar and neither is ever gated.
-print -r -- "GATES kite stage=M2-A root=$ROOT"
+print -r -- "GATES kite stage=M2-B root=$ROOT"
 print -r -- "KANON-DENOM serial_ms=$($PY -P -c 'import json, sys
 d = json.load(open(sys.argv[1]))
 print(d["kanon_ocamlopt_ms_per_kloc"])' $ROOT/dev/denominators.json) parallel_ms=$($PY -P -c 'import json, sys

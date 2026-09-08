@@ -30,13 +30,26 @@ let imported (value : Ast.import) =
     Ok {Eval.name = Ident.to_string value.iname; argument; result;
         deadline_ms = value.deadline_ms}
   | Ast.TName _ | Ast.TRec _ | Ast.TVar _ | Ast.TCode _ -> unsupported
+let manifest_entry (entry : Ast.mentry) =
+  let concrete = match Ident.to_string entry.kind with
+    | "Deployment" -> Some "deployment"
+    | "StatefulSet" -> Some "stateful_set"
+    | "Service" -> Some "service"
+    | "FreezeDrain" -> Some "drain"
+    | _generic_kind -> None in
+  Option.fold ~none:(Ok []) ~some:(fun manifest_kind ->
+    let* () = Result.map_error Eval.error_text (Eval.manifest_schema manifest_kind
+      (List.map (fun (label, _body) -> Label.to_string label) entry.fields)) in
+    Ok [Eval.Manifest {Eval.manifest_kind; manifest_name = Ident.to_string entry.ename;
+      manifest_fields = List.map (fun (label, body) -> label, Lower.expr body) entry.fields}]) concrete
 let rec declaration = function
   | Ast.DImport value -> Result.map (fun value -> [Eval.Import value]) (imported value)
   | Ast.DBudget (_caps, body) -> declaration body
   | Ast.DFreeze (_labels, body) ->
     Ok [Eval.Deferred {Ir.iname = Lower.freeze_name; ibody = Lower.expr body}]
+  | Ast.DManifest (_name, entries) -> Result.map List.concat (traverse manifest_entry entries)
   | (Ast.DLet _ | Ast.DLetRec _ | Ast.DProtocol _ | Ast.DRole _
-    | Ast.DManifest _ | Ast.DMilestone _) as value ->
+    | Ast.DMilestone _) as value ->
     Result.map (List.map (fun binding -> Eval.Binding binding))
       (Result.map_error Error.to_line (Lower.decl value))
 (* The emitted artifact is read back as text. A byte run that is not valid
@@ -102,6 +115,7 @@ let of_program program =
   let* items = Result.map List.concat (traverse declaration program) in
   let* () = all (function
     | Eval.Binding item | Eval.Deferred item -> valid_expression 0 item.Ir.ibody
+    | Eval.Manifest item -> all (fun (_label, body) -> valid_expression 0 body) item.Eval.manifest_fields
     | Eval.Import _ -> Ok ()) items in Ok items
 (* The emitted text is ascii only. A raw byte above 127 reads back as the
    encoding the reader picks, so every scalar value above 127 becomes its
@@ -198,5 +212,8 @@ let item = function
       "deadlineMs", string_of_int value.deadline_ms]
   | Eval.Deferred value -> node "deferred" ["name", name value.Ir.iname;
       "body", expression value.Ir.ibody]
+  | Eval.Manifest value -> node "manifest" ["kind", quote value.Eval.manifest_kind;
+      "name", quote value.manifest_name;
+      "fields", list (fun (key, body) -> obj ["name", label key; "body", expression body]) value.manifest_fields]
 let json values = obj ["version", "1"; "items", list item values]
 let javascript values = "globalThis.KiteArtifact = " ^ json values ^ ";\n"

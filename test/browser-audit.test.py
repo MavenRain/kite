@@ -22,6 +22,7 @@ class BrowserAuditTests(unittest.TestCase):
             'const locks = navigator.locks; locks.request("pod", callback)',
             'self["postMessage"]({})', 'globalThis["indexedDB"].open("db")',
             'eval(source)', 'new Function(source)',
+            'new BroadcastChannel("doorbell")',
             r'globalThis["\u0057orker"]', r'new \u0057orker("pod.js")',
             '`text ${new Worker("pod.js")}`',
             'const url = "https://example.test"; new Worker(url)',
@@ -40,7 +41,7 @@ class BrowserAuditTests(unittest.TestCase):
         self.assertIn('Worker', audit.code_tokens('const x = "/* safe */"; new Worker(x)'))
 
     def test_html_accepts_only_the_declared_script_sequence(self):
-        valid = '<script src="glue.js"></script><script src="page.js"></script>'
+        valid = ''.join(f'<script src="{name}"></script>' for name in audit.PAGE_SCRIPTS)
         self.assertEqual(audit.PageScripts().validate(valid), [])
         for source in [
             valid + '<script>new Worker("pod.js")</script>',

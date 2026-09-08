@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 // Real Chromium probes over CDP pipe, with no package dependencies.
-import { spawn } from "node:child_process";
+import { spawn, execFile } from "node:child_process";
 import { createServer } from "node:http";
-import { readFile, mkdtemp, rm, stat } from "node:fs/promises";
+import { readFile, writeFile, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
-if ([...args].some(arg => !["--hidden", "--help"].includes(arg))) {
-  console.error("usage: node dev/browser-test.mjs [--hidden]");
+if ([...args].some(arg => !["--hidden", "--pressure", "--help"].includes(arg))) {
+  console.error("usage: node dev/browser-test.mjs [--hidden] [--pressure]");
   process.exit(64);
 }
 if (args.has("--help")) {
-  console.log("usage: node dev/browser-test.mjs [--hidden]");
+  console.log("usage: node dev/browser-test.mjs [--hidden] [--pressure]");
   console.log("Build browser/model.bc.js first. Default runs quick real-browser probes.");
   console.log("--hidden also hides the page for 306 seconds before nested Worker spawn.");
+  console.log("--pressure adds PR-1 lifecycle and memory pressure diagnostics, reporting observed discard separately.");
   console.log("CHROME_BIN may select a Chromium binary; no throttling flags are disabled.");
   process.exit(0);
 }
@@ -204,6 +206,210 @@ async function productionProbe(origin) {
   }
 }
 
+async function sourceArtifacts() {
+  const folder = await mkdtemp(join(tmpdir(), "kite-source-browser-"));
+  const artifacts = {};
+  try {
+    for (const name of ["deployment", "stateful-set", "service", "freeze-drain"]) {
+      const file = join(folder, `${name}.kite`);
+      await writeFile(file, await readFile(join(root, `test/source/${name}.kite`)));
+      await promisify(execFile)(join(root, "_build/default/bin/kite.exe"), ["build", file],
+        {timeout: 30000, maxBuffer: 65536});
+      artifacts[name] = await readFile(`${file}.js`, "utf8");
+    }
+    return artifacts;
+  } finally { await rm(folder, {recursive: true, force: true}); }
+}
+
+const observed = (session, expression) => outcome(session,
+  `Promise.resolve(${expression}).then(value => ({ok:true,value}))`);
+const requireSource = (condition, message) => { if (!condition) throw new Error(`source probe: ${message}`); };
+async function sourcePage(origin, artifact, cluster, node = "sourceA") {
+  const tab = await page(`${origin}/browser/index.html?cluster=${cluster}&node=${node}`);
+  try {
+    await cdp.send("Page.bringToFront", {}, tab.session);
+    await poll(tab.session, "typeof kite !== 'undefined' && !!kite.ready && !!kite.workloads", 15000);
+    await outcome(tab.session, "kite.ready");
+    await evaluate(tab.session, `${artifact}\nglobalThis.sourceProbe = {calls:[]}; true`);
+    tab.loaded = await outcome(tab.session,
+      "kite.load(KiteArtifact, (name, argument) => {sourceProbe.calls.push({name, argument}); return null})");
+    return tab;
+  } catch (error) {
+    await cdp.send("Target.closeTarget", {targetId: tab.target});
+    throw error;
+  }
+}
+async function closeSource(tab) {
+  if (!tab) return;
+  try {
+    await outcome(tab.session, "Promise.all([kite.workloads.close(), kite.request('close')])" +
+      ".then(results => results.find(result => !result.ok) || {ok:true})");
+  } finally { await cdp.send("Target.closeTarget", {targetId: tab.target}); }
+}
+async function sourceView(tab, workload, predicate, label, timeoutMs = 25000) {
+  const deadline = Date.now() + timeoutMs;
+  let view;
+  while (Date.now() < deadline) {
+    if (browserErrors.length) throw new Error(browserErrors.join("\n"));
+    view = await outcome(tab.session, `kite.workloads.request(${JSON.stringify(workload)}, 'view')`);
+    if (view.error) throw new Error(`source workload error: ${view.error}`);
+    if (predicate(view)) return view;
+    await delay(125);
+  }
+  throw new Error(`${label} did not converge: ${JSON.stringify(view)}`);
+}
+const runningSource = (view, count) => view.node.nodeLock && view.node.workers.length === count &&
+  view.node.workers.every(worker => worker.phase === "running" &&
+    view.ticks.some(tick => tick.pod === worker.pod && tick.ticket === worker.ticket));
+const attachedSource = view => runningSource(view, 1) && view.volumes.length === 1 &&
+  view.volumes[0].phase === "attached" && view.volumes[0].writer;
+async function sourceCheckpoint(tab, marker) {
+  const deadline = Date.now() + 15000;
+  let result;
+  while (Date.now() < deadline) {
+    result = await observed(tab.session,
+      `kite.workloads.request('data','checkpoint',{entries:[${JSON.stringify(marker)}]})`);
+    if (result.ok) {
+      return sourceView(tab, "data", view => attachedSource(view) &&
+        view.volumes[0].committed.entries.includes(marker), "source committed checkpoint");
+    }
+    if (!["invalid_phase", "stale_callback"].includes(result.error))
+      throw new Error(`source checkpoint: ${JSON.stringify(result)}`);
+    await delay(125);
+  }
+  throw new Error(`source checkpoint timed out: ${JSON.stringify(result)}`);
+}
+async function sourceLeaseRelease(tab, cluster) {
+  const prefix = `kite:${cluster}:workload:`;
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    const held = await outcome(tab.session,
+      "navigator.locks.query().then(value => ({ok:true,value:value.held.map(lock => lock.name)}))");
+    if (!held.some(name => name.startsWith(prefix))) return;
+    await delay(125);
+  }
+  throw new Error("source freeze retained workload leases after settling");
+}
+async function sourceIntegrationProbe(origin, artifacts) {
+  const run = Date.now();
+  let tab;
+  try {
+    tab = await sourcePage(origin, artifacts.deployment, `source-deploy-${run}`);
+    requireSource(tab.loaded.manifests[0].bound === 3, "Deployment bound did not survive emission");
+    await sourceView(tab, "web", view => runningSource(view, 2), "source Deployment starts");
+    const refused = await observed(tab.session, "kite.workloads.request('web','desired',{count:4})");
+    requireSource(!refused.ok && refused.error === "invalid_desired", "Deployment exceeded checked bound");
+    const retained = await sourceView(tab, "web", view => runningSource(view, 2), "bound refusal retains placements");
+    requireSource(!retained.log.entries.some(entry => entry.payload.kind === "desired" && entry.payload.count === 4),
+      "refused desired count entered the durable log");
+    console.log("PASS source-deployment emitted-bound=3 refused-count=4 running=2 namespace=web");
+    await closeSource(tab); tab = undefined;
+
+    const stateCluster = `source-state-${run}`;
+    const marker = `source-checkpoint-${run}`;
+    tab = await sourcePage(origin, artifacts["stateful-set"], stateCluster);
+    await sourceView(tab, "data", attachedSource, "source StatefulSet volume claim");
+    const saved = await sourceCheckpoint(tab, marker);
+    const prior = saved.volumes[0];
+    await closeSource(tab); tab = undefined;
+    tab = await sourcePage(origin, artifacts["stateful-set"], stateCluster, "sourceB");
+    const recovered = await sourceView(tab, "data", view => attachedSource(view) &&
+      view.volumes[0].committed.entries.includes(marker), "source StatefulSet durable reopen");
+    requireSource(recovered.volumes[0].key === prior.key &&
+      recovered.volumes[0].writer.generation > prior.writer.generation, "StatefulSet identity or writer generation changed incorrectly");
+    console.log("PASS source-stateful-set close=deliberate-target-close namespace=data ordinal=0 committed-prefix=true fresh-generation=true");
+    await closeSource(tab); tab = undefined;
+
+    const serviceCluster = `source-service-${run}`;
+    tab = await sourcePage(origin, artifacts.service, serviceCluster);
+    const serviceView = await sourceView(tab, "web", view => runningSource(view, 1), "source Service workload");
+    const source = {service: "api", sender: "client", incarnation: 1, session: 1};
+    const publication = {source, sequence: 1, payload: `message-${run}`};
+    await outcome(tab.session, `kite.workloads.service('api',${JSON.stringify({kind: "handshake", source})})`);
+    const sent = await outcome(tab.session,
+      `kite.workloads.service('api',${JSON.stringify({kind: "send", publication})})`);
+    const duplicate = await outcome(tab.session,
+      `kite.workloads.service('api',${JSON.stringify({kind: "send", publication})})`);
+    requireSource(!sent.duplicate && duplicate.duplicate, "Service logical send did not deduplicate");
+    const conflicting = await observed(tab.session,
+      `kite.workloads.service('api',${JSON.stringify({kind: "send", publication: {...publication, payload: "conflict"}})})`);
+    requireSource(!conflicting.ok, "Service accepted changed payload for one logical send");
+    await closeSource(tab); tab = undefined;
+    tab = await sourcePage(origin, artifacts.service, serviceCluster, "sourceB");
+    await sourceView(tab, "web", view => runningSource(view, 1) &&
+      view.node.epoch > serviceView.node.epoch, "source Service fresh leader epoch");
+    const history = await outcome(tab.session, "kite.workloads.request('web','services')");
+    requireSource(history.services.includes("api") && history.messages.filter(message =>
+      message.publication.payload === publication.payload).length === 1, "Service durable history was lost or duplicated");
+    const stale = await observed(tab.session, `kite.workloads.request('web','service',${JSON.stringify({
+      epoch: serviceView.node.epoch, event: {kind: "handshake", source}})})`);
+    requireSource(!stale.ok && stale.error === "stale_epoch", "Service old epoch handshake was accepted");
+    console.log("PASS source-service named-channel=api duplicate-send=true conflicting-send=refused reopen-history=1 old-epoch=refused external-exactly-once=unclaimed");
+    await closeSource(tab); tab = undefined;
+
+    const drainCluster = `source-drain-${run}`;
+    tab = await sourcePage(origin, artifacts["freeze-drain"], drainCluster);
+    const before = await sourceView(tab, "data", attachedSource, "source FreezeDrain volume");
+    const frozen = await observed(tab.session, "kite.workloads.freeze()");
+    requireSource(typeof frozen.ok === "boolean" && (frozen.ok || typeof frozen.error === "string"),
+      "freeze checkpoint had no explicit outcome");
+    await sourceLeaseRelease(tab, drainCluster);
+    const calls = await evaluate(tab.session, "sourceProbe.calls");
+    requireSource(calls.filter(call => call.name === "host_probe" && call.argument === "startup").length === 1 &&
+      calls.filter(call => call.name === "host_probe" && call.argument === "retained").length === 1 &&
+      !calls.some(call => call.argument === "shadowed"), "freeze lost its captured source closure or replayed startup");
+    await outcome(tab.session, "kite.workloads.resume()");
+    await sourceView(tab, "data", view => attachedSource(view) &&
+      view.node.incarnation > before.node.incarnation, "source resume fresh lifecycle");
+    requireSource(await evaluate(tab.session, "sourceProbe.calls.filter(call => call.argument === 'startup').length") === 1,
+      "resume replayed source startup");
+    console.log(`PASS source-freeze-drain retained-closure=true startup-calls=1 leases-released=true checkpoint=${frozen.ok ? "completed" : `refused:${frozen.error}`} fresh-resume=true`);
+  } finally { await closeSource(tab); }
+}
+
+async function pressureProbe(origin, artifact) {
+  const run = Date.now();
+  const cluster = `source-pressure-${run}`;
+  const marker = `pressure-checkpoint-${run}`;
+  let tab;
+  try {
+    tab = await sourcePage(origin, artifact, cluster);
+    await sourceView(tab, "data", attachedSource, "PR-1 initial volume claim");
+    await sourceCheckpoint(tab, marker);
+    const storage = `kite-pressure-events-${run}`;
+    const recorder = `(() => {
+      const key=${JSON.stringify(storage)};
+      const record=type => { const events=JSON.parse(sessionStorage.getItem(key)||'[]');
+        events.push({type,wasDiscarded:!!document.wasDiscarded,hidden:document.hidden});
+        sessionStorage.setItem(key,JSON.stringify(events.slice(-20))); };
+      record('context');
+      for(const type of ['freeze','resume']) document.addEventListener(type,()=>record(type));
+      addEventListener('pagehide',()=>record('pagehide'));
+    })()`;
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", {source: recorder}, tab.session);
+    await evaluate(tab.session, `${recorder}; globalThis.pressureSentinel=${JSON.stringify(marker)}; true`);
+    await cdp.send("Memory.simulatePressureNotification", {level: "critical"}, tab.session);
+    await cdp.send("Page.setWebLifecycleState", {state: "frozen"}, tab.session);
+    await delay(300);
+    await cdp.send("Page.setWebLifecycleState", {state: "active"}, tab.session);
+    await cdp.send("Page.bringToFront", {}, tab.session);
+    const observation = await evaluate(tab.session, `({wasDiscarded:!!document.wasDiscarded,
+      localStateLost:globalThis.pressureSentinel!==${JSON.stringify(marker)},
+      events:JSON.parse(sessionStorage.getItem(${JSON.stringify(storage)})||'[]')})`);
+    if (observation.localStateLost) {
+      await poll(tab.session, "typeof kite !== 'undefined' && !!kite.ready", 15000);
+      await outcome(tab.session, "kite.ready");
+      await evaluate(tab.session, `${artifact}; true`);
+      await outcome(tab.session, "kite.load(KiteArtifact)");
+    } else await outcome(tab.session, "kite.workloads.resume()");
+    await sourceView(tab, "data", view => attachedSource(view) &&
+      view.volumes[0].committed.entries.includes(marker), "PR-1 recovery after lifecycle pressure");
+    const types = observation.events.map(event => event.type);
+    const discarded = observation.wasDiscarded && observation.localStateLost;
+    console.log(`PR-1 mode=memory-pressure-and-lifecycle diagnostic=true pressure=critical freeze-injection=Page.setWebLifecycleState events=${types.join(',')} pagehide=${types.includes('pagehide')} wasDiscarded=${observation.wasDiscarded} local-state-lost=${observation.localStateLost} recovered-prefix=true discard=${discarded ? 'observed' : 'not-observed'} target-close=cleanup-after-observation`);
+  } finally { await closeSource(tab); }
+}
+
 async function tabCloseProbe(origin, observer) {
   const name = `kite-tab-interruption-${Date.now()}`;
   const lockName = `${name}:leader`;
@@ -315,8 +521,13 @@ try {
   await cdp.send("Page.bringToFront", {}, testPage.session);
   await poll(testPage.session, "typeof KiteBrowserTests !== 'undefined'", 30000);
   await runProbe(testPage.session, "run");
+  const durable = await outcome(testPage.session, "KiteDurableTests.run()");
+  for (const line of durable.lines) console.log(line);
   await tabCloseProbe(origin, testPage);
   await productionProbe(origin);
+  const artifacts = await sourceArtifacts();
+  await sourceIntegrationProbe(origin, artifacts);
+  if (args.has("--pressure")) await pressureProbe(origin, artifacts["stateful-set"]);
   if (args.has("--hidden")) {
     await cdp.send("Page.bringToFront", {}, testPage.session);
     const foreground = await page("about:blank");
