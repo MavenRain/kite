@@ -6,12 +6,13 @@ Passing a native stage does not establish IndexedDB durability or browser
 freeze behavior. M1's six behaviors and shipping-pipeline FLOOR remain
 required throughout.
 
-M2-B now implements the source and browser bindings described below. Its
-four source integration fixtures and durable browser probes run in the
-regular BROWSER leg. The PR-1 diagnostic distinguishes observed lifecycle
-events from discard and deliberate closure. The full M2-C fault matrix and
-an observed discard under memory pressure remain outstanding; see the
-[M2 build log](M2-BUILD-LOG.md) for measured evidence and limits.
+M2-B implements the source and browser bindings described below. M2-C adds
+the complete four-manifest, twelve-fault acceptance matrix to the regular
+BROWSER leg, with a checked JSON witness for every row. The PR-1 diagnostic
+distinguishes observed lifecycle events from discard and deliberate closure.
+An observed discard under memory pressure remains outstanding; see the
+[M2-C brief](stage-M2-C-brief.md) and [M2 build log](M2-BUILD-LOG.md) for
+measured evidence and limits.
 
 The basis is the design verdict's A3, A8 and A10 amendments and M2 row
 (`/Users/oobi/Documents/tab-cluster-lang-design-verdict.md:287`, `:292`,

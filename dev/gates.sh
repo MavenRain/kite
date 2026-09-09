@@ -440,7 +440,7 @@ leg_source () {
 
 # Browser state races and actual Workers, Web Locks and IndexedDB.
 leg_browser () {
-  local out code
+  local out code n bad skip
   out=$($PY $ROOT/dev/browser-audit.py 2>&1)
   code=$?
   print -r -- "$out"
@@ -449,14 +449,25 @@ leg_browser () {
   code=$?
   print -r -- "$out"
   if [[ $code -ne 0 ]]; then print -r -- "FAIL BROWSER"; return 1; fi
-  out=$(node --test --test-reporter=tap $ROOT/test/glue.test.mjs $ROOT/test/node-host.test.mjs $ROOT/test/control.test.mjs $ROOT/test/source.test.mjs $ROOT/test/acceptance-bridge-test.mjs $ROOT/test/durable-browser.test.mjs $ROOT/test/durable-model.test.mjs $ROOT/test/workloads.test.mjs $ROOT/test/pipeline.test.mjs 2>&1)
+  out=$(node --test --test-reporter=tap $ROOT/test/glue.test.mjs $ROOT/test/node-host.test.mjs $ROOT/test/control.test.mjs $ROOT/test/source.test.mjs $ROOT/test/acceptance-bridge-test.mjs $ROOT/test/durable-browser.test.mjs $ROOT/test/durable-model.test.mjs $ROOT/test/workloads.test.mjs $ROOT/test/pipeline.test.mjs $ROOT/test/m2-evidence.test.mjs $ROOT/test/m2-lifecycle-faults.test.mjs 2>&1)
   code=$?
   print -r -- "$out"
-  if [[ $code -ne 0 ]]; then print -r -- "FAIL BROWSER"; return 1; fi
+  # The exit code alone accepts a skipped or emptied suite, so read the counts.
+  n=$(print -r -- "$out" | rg -o -r '$1' '^# pass (\d+)$')
+  bad=$(print -r -- "$out" | rg -o -r '$1' '^# fail (\d+)$')
+  skip=$(print -r -- "$out" | rg -o -r '$1' '^# skipped (\d+)$')
+  if [[ $code -ne 0 || ${n:-0} -lt 105 || ${bad:-1} -ne 0 || ${skip:-1} -ne 0 ]]; then
+    print -r -- "FAIL BROWSER cases=${n:-none} failed=${bad:-none} skipped=${skip:-none} floor=105"
+    return 1
+  fi
   out=$(node $ROOT/dev/browser-test.mjs 2>&1)
   code=$?
   print -r -- "$out"
   if [[ $code -eq 0 ]] && print -r -- "$out" | rg -q '^BROWSER-OK$'; then
+    print -r -- "$out" | node $ROOT/dev/m2-evidence.mjs - || {
+      print -r -- "FAIL BROWSER matrix-evidence"
+      return 1
+    }
     print -r -- "PASS BROWSER"
     return 0
   fi
@@ -715,7 +726,7 @@ fail=0
 
 # Line 1 names the tree and line 2 carries the frozen kanon denominators.
 # Both figures come from the sidecar and neither is ever gated.
-print -r -- "GATES kite stage=M2-B root=$ROOT"
+print -r -- "GATES kite stage=M2-C root=$ROOT"
 print -r -- "KANON-DENOM serial_ms=$($PY -P -c 'import json, sys
 d = json.load(open(sys.argv[1]))
 print(d["kanon_ocamlopt_ms_per_kloc"])' $ROOT/dev/denominators.json) parallel_ms=$($PY -P -c 'import json, sys

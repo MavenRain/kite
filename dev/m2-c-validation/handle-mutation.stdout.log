@@ -1,0 +1,20 @@
+BROWSER Chrome/152.0.7977.77 revision=@529d9a34b491745086b59458f58a5aae8292adaa mode=headless
+PASS native-model-bridge-lifecycle-planner-and-invalid-inputs
+PASS real-lock-contention-cancellation-and-generation-local-release
+PASS idb-concurrent-cas-append-rollback-and-reopen
+PR-2 mode=foreground hidden_age_ms=0 root_spawn_ms=7 nested_spawn_ms=6 first_work_ms=41 timer_interval_ms=40 observed_cadence_ms=41,42,41,42,38,38 spawn_within_3s=true
+PASS nested-worker-pod-lock-begin-and-busy-refusal
+PR-4 transaction_started_before_termination=true marker=append-returned writes_queued_before_termination=unobserved attempts=1 interrupted=1 committed=0 connection_close_drained=true atomic_prefix=true lock_handoff=true recovery_epoch=2 stale_append=refused
+PASS idb-close-pending-transaction-and-writer-termination-recovery
+PASS M2-B volume atomic fences, prepared freeze, transaction outcome=AbortError, commit-before-notification recovery
+PASS M2-B consistent feed polling with final doorbell dropped and duplicate reordered hints
+PASS M2-B durable Service deduplication, changed-payload refusal, epoch handshake and reopen recovery
+PR-4 mode=tab-close close=Target.closeTarget independent_observer=true transaction_started_before_close=true marker=append-returned writes_queued_before_close=unobserved attempts=1 interrupted=1 committed=0 lock_handoff=true claim_before_observer_read=true atomic_prefix=true recovery_epoch=2 stale_append=refused
+PASS idb-writer-tab-close-lock-handoff-and-fenced-recovery
+PASS production-two-tab-desired-placement-and-work
+PASS production-leader-freeze-pod-replacement-and-epoch-takeover
+PASS production-resume-fresh-incarnation
+PASS source-deployment emitted-bound=3 refused-count=4 running=2 namespace=web
+PASS source-stateful-set death=Worker.terminate close=cleanup-after-death namespace=data ordinal=0 committed-prefix=true fresh-generation=true
+PASS source-service named-channel=api duplicate-send=true conflicting-send=refused reopen-history=1 old-epoch=refused external-exactly-once=unclaimed
+PASS source-freeze-drain retained-closure=true startup-calls=1 leases-released=true checkpoint=refused:host_failed: node_unavailable fresh-resume=true

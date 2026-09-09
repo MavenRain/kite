@@ -300,3 +300,138 @@ The gate run after this pass prints feed 22, service 23, volume 33, taint 25
 and manifest 20 durable cases, 42 native evaluator cases,
 `M2-MUTATIONS tests=18 killed=18 survived=0 unbuildable=0`, GLUE 285 of 300
 lines and the elaborator at 2,374 of 2,400 lines.
+
+## M2-C, 2026-09-07
+
+Started from clean M2-B at `9b95017a8d4c780c142eb45fe68ca35bc74b1906`.
+Implementation and validation use the tracked source copy at
+`/Users/oobi/Documents/gpt9/kite-m2c`. Publication verifies the original
+HEAD, clean destination, frozen executable hashes and staged file bytes.
+The user commits; this stage only copies and stages the reviewed changes.
+
+The regular BROWSER leg now requires all four source manifests and twelve
+real-browser fault witnesses. Each row records its injection, typed outcome
+and measured invariant evidence as JSON. Both the runner and a separate
+transcript validator reject an incomplete matrix. Seventeen validator tests
+cover missing rows, duplicate identities, renumbered clones, records below
+the summary, malformed witnesses and a success summary without evidence.
+No runtime or shipped browser source changes.
+
+The durable probes use the production adapters and compiled native models
+with real IndexedDB, Web Locks and BroadcastChannel. Dropped hints must be
+recovered by timer-driven reads; reordered hints must actually arrive at the
+channel callback. Old epochs, generations and Service sessions are refused
+without changing committed data. Checkpoint freeze probes record real
+transaction settlement before exact-lease release, and reopen an independent
+connection to check the recovered prefix. The committed-notification case
+deliberately drops the supplied observer callback after real IDB completion.
+
+Starting and Stopping deaths run the production node host and nested pod
+Worker behind test barriers. They verify refusal before native lease
+release, child-lease disappearance, fresh-epoch replacement work and
+detached-message rejection. A deliberate mutation removing only the
+registered-handle guard in `KiteNode.message` failed the real Starting test
+at `stale callback leaves replacement unchanged`, after all four source
+fixtures passed. The [mutation output](m2-c-validation/handle-mutation.stdout.log)
+and [expected failure](m2-c-validation/handle-mutation.stderr.log) retain
+that evidence; the disposable source copy was removed.
+
+`Target.closeTarget` invokes pagehide in the tested Chrome, so target closure
+alone cannot establish death without graceful drain. The source StatefulSet
+and Running fault now capture and terminate the actual workload control
+Worker through the unchanged GLUE operation. Before closing the victim tab
+for cleanup, the runner verifies that every workload lease disappeared and
+neither pagehide nor freeze ran. The successor must recover the complete
+committed prefix under the same volume key and a fresh epoch and generation.
+Independent review found no remaining defects or weakened inherited gates.
+
+The [PR-1 run](m2-c-validation/pressure.log) passed the full browser matrix,
+then observed `context,freeze,resume` under critical memory pressure and
+explicit lifecycle injection. The checkpoint prefix survived.
+`wasDiscarded=false` and `local-state-lost=false`: a browser discard was
+not observed. Deliberate Worker termination is recorded separately from
+that diagnostic. These witnesses do not establish exactly-once external
+message processing, arbitrary heap serialization or general WasmGC emission.
+Indexed invariant proofs remain M3.
+
+### Full gate evidence
+
+The [complete battery](m2-c-validation/gates.log) exited zero with
+`GATES-OK`, and all twelve measured legs exited zero. The original sandboxed
+browser attempt passed the unit suites but could not bind its loopback
+server (`listen EPERM`); real Chrome validation used the required local
+server access. The initial pinned build succeeded with existing cold
+js_of_ocaml integer-overflow warnings; the final BUILD leg was silent.
+
+- Native evaluator: 42/42; compiled source: 17/17; browser unit tests:
+  110/110, including the 17 transcript-validator cases and the 3 lifecycle
+  runner cases. The BROWSER leg reads that TAP summary and requires at least
+  105 cases with fail 0 and skipped 0, so a skipped or emptied suite fails.
+- Real Chrome: all four manifests and twelve fault rows passed, followed
+  by `M2-EVIDENCE OK manifests=4 faults=12`. The in-flight freeze observed
+  `AbortError`, unchanged recovered data and lease release after settlement.
+- All six M1 behaviors passed. Hidden age was 307,034 ms, pod work was
+  reported in 477 ms and leader convergence in 680 ms, within the unchanged
+  3,000 ms and 5,000 ms limits. Independent timing evidence also passed.
+- The elaborator remains 2,374/2,400 lines and GLUE 285/300. Both pinned
+  corpora and every shipping pipeline phase remain unchanged.
+- FLOOR: pipeline 440.271 ms/kloc versus raw compiler 505.201 ms/kloc.
+  Both five-run medians were taken in UTC minute `2026-09-08T04:04`,
+  with host load 9.76 before and 9.14 after. No bound or timing protocol
+  changed, and no retry was required.
+
+The [source manifest](m2-c-validation/sources.json) pins 171 executable,
+fixture and configuration files before the battery. Their hashes were
+checked again afterward and before publication. Documentation and evidence
+were finalized after validation; no executable changes followed the run.
+
+### Review round 1 fix pass 1 (2026-09-08)
+
+| Id | File | Change | Acceptance evidence |
+| --- | --- | --- | --- |
+| H1 | `dev/gates.sh` | The BROWSER leg reads the node TAP summary and requires at least 105 cases with fail 0 and skipped 0. | A copy with a skipped validator suite printed `FAIL BROWSER cases=31 failed=5 skipped=17 floor=105`; the tree prints `# pass 110` and `PASS BROWSER`. |
+| H2 | `dev/m2-evidence.mjs`, `test/m2-evidence.test.mjs` | The validator pins the plan row name of every fault id and exports that table. | Twelve renumbered clones of row 1 give `M2-EVIDENCE REFUSED: faults[1].fault must be the plan row of id 2` and exit 1. |
+| H3 | `dev/m2-evidence.mjs`, `test/m2-evidence.test.mjs` | The validator refuses a record below the success summary and keeps free order above it. | A summary-first transcript gives `line 3: record follows the M2-OK summary`; runner order still prints `M2-EVIDENCE OK manifests=4 faults=12`. |
+| H4 | `test/m2-evidence.test.mjs` | The two argument-count arms run against the complete transcript and pin the usage message. | A copy without the usage check reports `# fail 1`; the tree reports `# pass 17`. |
+| H7 | `test/m2-durable-probe.js`, `test/m2-lifecycle-probe.js` | Every witness field of rows 1, 3, 4, 6, 7, 9, 11 and 12 now reports a measurement, and the notification check counts events of either name. | The BROWSER leg prints row 12 with `"notificationsDelivered":0,"notificationsDropped":1` read from the event list, and row 9 with a numeric `nativeLeaseWaitMs`. |
+| H11 | `test/m2-lifecycle-probe.js`, `dev/m2-lifecycle-faults.mjs`, `test/m2-lifecycle-faults.test.mjs` | Rows 7, 8 and 9 report a typed outcome built from the observed phase, epoch and generation. | No `"outcome":"ok"` remains in the twelve fault rows; the new case fails against the reverted line. |
+| H13 | `dev/m2-lifecycle-faults.mjs`, `test/m2-lifecycle-faults.test.mjs`, `dev/gates.sh` | The cleanup closes the observer target after a failed victim tab close, keeps the matrix error and still fails a clean run. | `node --test test/m2-lifecycle-faults.test.mjs` reports `# pass 3`; the staged cleanup reports `# fail 3`. |
+
+Before this pass the BROWSER leg accepted a skipped node suite, the validator
+accepted renumbered clones and records below the summary, seven witness
+fields carried chosen constants, three death rows recorded the word `ok`, and
+a failed victim tab close hid the matrix error and left the observer target
+open. After this pass the leg reads its own counts, the validator binds each
+id to its plan row and to its position, every witness field is a measurement,
+each death row names its observed epoch, and the cleanup always closes the
+observer target.
+
+The gate run after this pass prints feed 22, service 23, volume 33, taint 25
+and manifest 20 durable cases, 42 native evaluator cases, 110 browser node
+cases of which 17 are validator cases, `M2-EVIDENCE OK manifests=4 faults=12`,
+`M2-MUTATIONS tests=18 killed=18 survived=0 unbuildable=0`, GLUE 285 of 300
+lines and the elaborator at 2,374 of 2,400 lines.
+
+### Review round 1 fix pass 2 (2026-09-08)
+
+| Id | File | Change | Acceptance evidence |
+| --- | --- | --- | --- |
+| H1 | `dev/gates.sh` | Kept from pass 1. The BROWSER leg parses the node TAP summary and fails below 105 cases, or on any failed or skipped case. | The battery prints `# tests 110`, `# fail 0`, `# skipped 0` and `PASS BROWSER`. |
+| H2 | `dev/m2-evidence.mjs`, `test/m2-evidence.test.mjs` | Kept from pass 1. The validator binds each fault id to its plan row name. | `node --test test/m2-evidence.test.mjs` reports `# pass 17` with `# fail 0`. |
+| H3 | `dev/m2-evidence.mjs`, `test/m2-evidence.test.mjs` | Kept from pass 1. The validator refuses a record below the success summary. | The leg prints `M2-EVIDENCE OK manifests=4 faults=12` for runner order. |
+| H4 | `test/m2-evidence.test.mjs` | Kept from pass 1. The two argument count arms run against the complete transcript and pin the usage message. | The suite reports `# pass 17` with `# fail 0`. |
+| H7 | `test/m2-durable-probe.js` | Row 1 now counts every read of the durable connection. The direct read count of the probe is the difference between that total and the feed read count, so the witness can fail. | A copy with one direct probe read after the append fails with `no probe read of its own discovered the final write` and prints `FAIL BROWSER`; the tree prints twelve `M2-FAULT` rows and `PASS BROWSER`. |
+| H11 | `test/m2-lifecycle-probe.js`, `dev/m2-lifecycle-faults.mjs` | Kept from pass 1. Rows 7, 8 and 9 report a typed outcome built from the observed phase, epoch and generation. | No `"outcome":"ok"` appears in the twelve fault rows of the battery. |
+| H13 | `dev/m2-lifecycle-faults.mjs`, `test/m2-lifecycle-faults.test.mjs`, `dev/gates.sh` | Kept from pass 1. The cleanup always closes the observer target and keeps the matrix error. | The eleven file node run reports `# pass 110` with `# fail 0`. |
+
+Before this pass the row 1 witness counted reads of a probe connection that
+the row never read, so `manualReadsAfterAppend` was zero by construction and
+its check could not fail. After this pass the row counts every read of the
+durable connection and reports the reads that the feed did not make, so a
+direct probe read raises the count and fails the row.
+
+The gate run after this pass prints feed 22, service 23, volume 33, taint 25
+and manifest 20 durable cases, 42 native evaluator cases, 110 browser node
+cases of which 17 are validator cases, `M2-EVIDENCE OK manifests=4 faults=12`,
+`M2-MUTATIONS tests=18 killed=18 survived=0 unbuildable=0`, GLUE 285 of 300
+lines and the elaborator at 2,374 of 2,400 lines.

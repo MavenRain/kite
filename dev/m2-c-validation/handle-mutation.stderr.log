@@ -1,0 +1,36 @@
+BROWSER-FAIL Error: production host outcome: {"ok":false,"error":"Error: stale callback leaves replacement unchanged\n    at assert (http://127.0.0.1:64578/test/m2-lifecycle-probe.js:5:66)\n    at fault (http://127.0.0.1:64578/test/m2-lifecycle-probe.js:116:7)\n    at async Object.run (http://127.0.0.1:64578/test/m2-lifecycle-probe.js:147:37)"}
+    at outcome (file:///private/tmp/kite-stale-callback-mutation-mamvu4h4/dev/browser-test.mjs:116:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async runLifecycleFaults (file:///private/tmp/kite-stale-callback-mutation-mamvu4h4/dev/m2-lifecycle-faults.mjs:14:18)
+    at async file:///private/tmp/kite-stale-callback-mutation-mamvu4h4/dev/browser-test.mjs:590:27
+Chrome stderr tail:
+Trying to load the allocator multiple times. This is *not* supported.
+[58649:130629052:0907/205812.666548:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205812.667058:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205812.670251:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205812.670473:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205812.695250:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205812.695357:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205812.695598:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205812.695675:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205812.695876:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205812.695947:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205812.696113:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205812.696184:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205814.693776:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205814.693855:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205814.786927:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205814.787015:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205814.828816:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205814.828892:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205814.894035:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205814.894121:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58634:130629033:0907/205814.927023:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[58649:130629052:0907/205814.940342:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205814.940420:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205815.013785:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205815.013874:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205815.055112:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205815.055185:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629052:0907/205815.071050:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[58649:130629128:0907/205815.071129:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670

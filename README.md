@@ -51,6 +51,8 @@ checkpoints, visibility taints and manifest admission. See
 M2-B binds those models to browser transactions and source manifests.
 [The M2-B brief](dev/stage-M2-B-brief.md) describes workload namespaces,
 regular checkpoints, durable services and retained source freeze handlers.
+M2-C adds the four-manifest, twelve-fault browser acceptance matrix, with
+per-fault injection and recovery evidence. See [the M2-C brief](dev/stage-M2-C-brief.md).
 
 After building, serve the repository with `python3 -m http.server 8000
 --bind 127.0.0.1` and open `http://127.0.0.1:8000/browser/index.html`
@@ -94,7 +96,7 @@ concurrently, checks both compiler results, and assembles the package.
 
 ## Gates
 
-M2-B runs the seven M0 legs plus RUNTIME, DURABLE, SOURCE, BROWSER and ACCEPTANCE,
+M2-C runs the seven M0 legs plus RUNTIME, DURABLE, SOURCE, BROWSER and ACCEPTANCE,
 through one command,
 `zsh dev/gates.sh`:
 
@@ -118,7 +120,9 @@ through one command,
   contracts, concrete manifests, retained freeze sessions and explicit failures.
 - BROWSER:  checks the GLUE boundary, asynchronous lifecycle races,
   actual nested Workers, source workloads, Web Locks and IndexedDB transactions in
-  isolated Chrome.  Run it alone with `zsh dev/gates.sh --leg browser`.
+  isolated Chrome. Requires all four source manifests and twelve M2 fault
+  witnesses, with independent transcript validation.
+  Run it alone with `zsh dev/gates.sh --leg browser`.
 - ACCEPTANCE: runs all six source-driven behaviors under Chrome, with
   pod work within 3 seconds and the leader's view within 5 seconds after
   a desired-count change in tabs hidden for more than five minutes.
@@ -152,7 +156,8 @@ the host boundary and PR-2 timing interpretation. The full M1-C gate is
 `node dev/browser-test.mjs --pressure` adds a PR-1 diagnostic that records
 memory-pressure injection and observed freeze/resume events separately from
 deliberate page closure. It reports whether a discard actually occurred.
-M2-C's complete twelve-fault browser matrix remains outstanding.
+The complete twelve-fault browser matrix runs by default. An observed
+browser discard under memory pressure remains outstanding.
 
 ## Licence and author
 

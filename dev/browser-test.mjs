@@ -7,6 +7,8 @@ import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { validateEvidence } from "./m2-evidence.mjs";
+import { runLifecycleFaults } from "./m2-lifecycle-faults.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = new Set(process.argv.slice(2));
@@ -230,7 +232,15 @@ async function sourcePage(origin, artifact, cluster, node = "sourceA") {
     await cdp.send("Page.bringToFront", {}, tab.session);
     await poll(tab.session, "typeof kite !== 'undefined' && !!kite.ready && !!kite.workloads", 15000);
     await outcome(tab.session, "kite.ready");
-    await evaluate(tab.session, `${artifact}\nglobalThis.sourceProbe = {calls:[]}; true`);
+    await evaluate(tab.session, `${artifact}\n(() => {
+      globalThis.sourceProbe = {calls:[], workers:[], lifecycle:[]};
+      const spawn = KiteGlue.spawn;
+      KiteGlue.spawn = (...args) => {
+        const result = spawn(...args);
+        if (result.ok) sourceProbe.workers.push({url:args[0], native:result.value});
+        return result;
+      };
+    })(); true`);
     tab.loaded = await outcome(tab.session,
       "kite.load(KiteArtifact, (name, argument) => {sourceProbe.calls.push({name, argument}); return null})");
     return tab;
@@ -245,6 +255,35 @@ async function closeSource(tab) {
     await outcome(tab.session, "Promise.all([kite.workloads.close(), kite.request('close')])" +
       ".then(results => results.find(result => !result.ok) || {ok:true})");
   } finally { await cdp.send("Target.closeTarget", {targetId: tab.target}); }
+}
+async function killSource(tab) {
+  const killed = await outcome(tab.session, `(() => {
+    if (sourceProbe.workers.length !== 1 ||
+        !sourceProbe.workers[0].url.endsWith('control.js'))
+      return {ok:false,error:'expected_one_workload_control_worker'};
+    sourceProbe.lifecycle = [];
+    addEventListener('pagehide', () => sourceProbe.lifecycle.push('pagehide'),
+      {capture:true,once:true});
+    document.addEventListener('freeze', () => sourceProbe.lifecycle.push('freeze'),
+      {capture:true,once:true});
+    const result = KiteGlue.kill(sourceProbe.workers[0].native);
+    return result.ok ? {ok:true,value:{prefix:'kite:' +
+      new URL(location.href).searchParams.get('cluster') + ':workload:'}} : result;
+  })()`);
+  const deadline = Date.now() + 15000;
+  let remaining;
+  do {
+    remaining = (await outcome(tab.session, "KiteGlue.locks()"))
+      .filter(name => name.startsWith(killed.prefix));
+    if (remaining.length) await delay(20);
+  } while (remaining.length && Date.now() < deadline);
+  requireSource(remaining.length === 0, "terminated workload retains native leases");
+  const lifecycle = await evaluate(tab.session, "sourceProbe.lifecycle");
+  requireSource(lifecycle.length === 0, `node death invoked lifecycle drain: ${lifecycle}`);
+  const closed = await cdp.send("Target.closeTarget", {targetId: tab.target});
+  requireSource(closed.success, "dead node tab cleanup was not acknowledged");
+  return {workerTerminated: true, nativeLeasesAfterDeath: remaining.length,
+    lifecycleEventsBeforeDeath: lifecycle, targetClosedAfterDeath: closed.success};
 }
 async function sourceView(tab, workload, predicate, label, timeoutMs = 25000) {
   const deadline = Date.now() + timeoutMs;
@@ -292,6 +331,7 @@ async function sourceLeaseRelease(tab, cluster) {
 }
 async function sourceIntegrationProbe(origin, artifacts) {
   const run = Date.now();
+  const manifests = [];
   let tab;
   try {
     tab = await sourcePage(origin, artifacts.deployment, `source-deploy-${run}`);
@@ -303,6 +343,9 @@ async function sourceIntegrationProbe(origin, artifacts) {
     requireSource(!retained.log.entries.some(entry => entry.payload.kind === "desired" && entry.payload.count === 4),
       "refused desired count entered the durable log");
     console.log("PASS source-deployment emitted-bound=3 refused-count=4 running=2 namespace=web");
+    manifests.push({name: "deployment", outcome: refused.error, witness: {
+      bound: tab.loaded.manifests[0].bound, refusedCount: 4,
+      running: retained.node.workers.length, refusedCountRecorded: false}});
     await closeSource(tab); tab = undefined;
 
     const stateCluster = `source-state-${run}`;
@@ -311,13 +354,19 @@ async function sourceIntegrationProbe(origin, artifacts) {
     await sourceView(tab, "data", attachedSource, "source StatefulSet volume claim");
     const saved = await sourceCheckpoint(tab, marker);
     const prior = saved.volumes[0];
-    await closeSource(tab); tab = undefined;
+    const death = await killSource(tab);
+    tab = undefined;
     tab = await sourcePage(origin, artifacts["stateful-set"], stateCluster, "sourceB");
     const recovered = await sourceView(tab, "data", view => attachedSource(view) &&
       view.volumes[0].committed.entries.includes(marker), "source StatefulSet durable reopen");
     requireSource(recovered.volumes[0].key === prior.key &&
       recovered.volumes[0].writer.generation > prior.writer.generation, "StatefulSet identity or writer generation changed incorrectly");
-    console.log("PASS source-stateful-set close=deliberate-target-close namespace=data ordinal=0 committed-prefix=true fresh-generation=true");
+    console.log("PASS source-stateful-set death=Worker.terminate close=cleanup-after-death namespace=data ordinal=0 committed-prefix=true fresh-generation=true");
+    manifests.push({name: "stateful-set", outcome: "recovered", witness: {
+      injection: "Worker.terminate-without-drain", ...death, key: prior.key, marker,
+      previousGeneration: prior.writer.generation,
+      recoveredGeneration: recovered.volumes[0].writer.generation,
+      recoveredEntries: recovered.volumes[0].committed.entries}});
     await closeSource(tab); tab = undefined;
 
     const serviceCluster = `source-service-${run}`;
@@ -345,6 +394,10 @@ async function sourceIntegrationProbe(origin, artifacts) {
       epoch: serviceView.node.epoch, event: {kind: "handshake", source}})})`);
     requireSource(!stale.ok && stale.error === "stale_epoch", "Service old epoch handshake was accepted");
     console.log("PASS source-service named-channel=api duplicate-send=true conflicting-send=refused reopen-history=1 old-epoch=refused external-exactly-once=unclaimed");
+    manifests.push({name: "service", outcome: stale.error, witness: {
+      name: "api", duplicate: duplicate.duplicate, conflict: conflicting.error,
+      recoveredMessages: history.messages.filter(message =>
+        message.publication.payload === publication.payload).length}});
     await closeSource(tab); tab = undefined;
 
     const drainCluster = `source-drain-${run}`;
@@ -364,7 +417,12 @@ async function sourceIntegrationProbe(origin, artifacts) {
     requireSource(await evaluate(tab.session, "sourceProbe.calls.filter(call => call.argument === 'startup').length") === 1,
       "resume replayed source startup");
     console.log(`PASS source-freeze-drain retained-closure=true startup-calls=1 leases-released=true checkpoint=${frozen.ok ? "completed" : `refused:${frozen.error}`} fresh-resume=true`);
+    manifests.push({name: "freeze-drain", outcome: frozen.ok ? "completed" : frozen.error,
+      witness: {startupCalls: calls.filter(call => call.argument === "startup").length,
+        retainedCalls: calls.filter(call => call.argument === "retained").length,
+        leasesReleased: true, freshResume: true}});
   } finally { await closeSource(tab); }
+  return manifests;
 }
 
 async function pressureProbe(origin, artifact) {
@@ -526,7 +584,17 @@ try {
   await tabCloseProbe(origin, testPage);
   await productionProbe(origin);
   const artifacts = await sourceArtifacts();
-  await sourceIntegrationProbe(origin, artifacts);
+  const manifests = await sourceIntegrationProbe(origin, artifacts);
+  await cdp.send("Page.bringToFront", {}, testPage.session);
+  const durableFaults = await outcome(testPage.session, "KiteM2DurableTests.run()");
+  const lifecycleFaults = await runLifecycleFaults({origin, page, evaluate, outcome,
+    poll, delay, cdp, artifacts, sourcePage, sourceView, sourceCheckpoint, closeSource,
+    killSource});
+  const faults = [...durableFaults.rows, ...lifecycleFaults].sort((a, b) => a.id - b.id);
+  validateEvidence({faults, manifests});
+  for (const manifest of manifests) console.log(`M2-MANIFEST ${JSON.stringify(manifest)}`);
+  for (const fault of faults) console.log(`M2-FAULT ${JSON.stringify(fault)}`);
+  console.log("M2-OK manifests=4 faults=12 browser=real");
   if (args.has("--pressure")) await pressureProbe(origin, artifacts["stateful-set"]);
   if (args.has("--hidden")) {
     await cdp.send("Page.bringToFront", {}, testPage.session);
